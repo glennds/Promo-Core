@@ -207,9 +207,9 @@ function managepromo_features() {
                     <tr>
                         <td style="font-weight: 600">Uitgelogde website bezoekers omleiden naar inlogpagina van subsite</td>
                         <td>
-                            <input type="hidden" name="managepromo_function_toggles[users_redirect_guests_to_login]" value="0">
+                            <input type="hidden" name="ds_functiontoggles[users_redirect_guests_to_login]" value="0">
                             <label class="ds-toggle">
-                                <input type="checkbox" name="managepromo_function_toggles[users_redirect_guests_to_login]" value="1" <?php checked((int) ($options['users_redirect_guests_to_login'] ?? 0), 1); ?>>
+                                <input type="checkbox" name="ds_functiontoggles[users_redirect_guests_to_login]" value="1" <?php checked((int) ($options['users_redirect_guests_to_login'] ?? 0), 1); ?>>
                                 <span class="ds-slider"></span>
                             </label>
                         </td>
@@ -217,9 +217,9 @@ function managepromo_features() {
                     <tr>
                         <td style="font-weight: 600">Beperk inloggen voor klant tot alleen gekoppelde subsites</td>
                         <td>
-                            <input type="hidden" name="managepromo_function_toggles[users_restrict_login_to_subsite]" value="0">
+                            <input type="hidden" name="ds_functiontoggles[users_restrict_login_to_subsite]" value="0">
                             <label class="ds-toggle">
-                                <input type="checkbox" name="managepromo_function_toggles[users_restrict_login_to_subsite]" value="1" <?php checked((int) ($options['users_restrict_login_to_subsite'] ?? 0), 1); ?>>
+                                <input type="checkbox" name="ds_functiontoggles[users_restrict_login_to_subsite]" value="1" <?php checked((int) ($options['users_restrict_login_to_subsite'] ?? 0), 1); ?>>
                                 <span class="ds-slider"></span>
                             </label>
                         </td>
@@ -227,9 +227,9 @@ function managepromo_features() {
                     <tr>
                         <td style="font-weight: 600">Accountbeheer wijzigingen, bulk accountgeneratie en import/export van gebruikers/orders/klantdata.</td>
                         <td>
-                            <input type="hidden" name="managepromo_function_toggles[users_disable_email_bulkgen_exportimport]" value="0">
+                            <input type="hidden" name="ds_functiontoggles[users_disable_email_bulkgen_exportimport]" value="0">
                             <label class="ds-toggle">
-                                <input type="checkbox" name="managepromo_function_toggles[users_disable_email_bulkgen_exportimport]" value="1" <?php checked((int) ($options['users_disable_email_bulkgen_exportimport'] ?? 0), 1); ?>>
+                                <input type="checkbox" name="ds_functiontoggles[users_disable_email_bulkgen_exportimport]" value="1" <?php checked((int) ($options['users_disable_email_bulkgen_exportimport'] ?? 0), 1); ?>>
                                 <span class="ds-slider"></span>
                             </label>
                         </td>
@@ -237,9 +237,9 @@ function managepromo_features() {
                     <tr>
                         <td style="font-weight: 600">VERBETEREN - Redirect gebruikers naar /inloggen/ als ze ingelogd zijn, klant zijn en homepage bezoeken (ALLEEN VOOR GEGEVENSBRON)</td>
                         <td>
-                            <input type="hidden" name="managepromo_function_toggles[users_mainsite_redirect]" value="0">
+                            <input type="hidden" name="ds_functiontoggles[users_mainsite_redirect]" value="0">
                             <label class="ds-toggle">
-                                <input type="checkbox" name="managepromo_function_toggles[users_mainsite_redirect]" value="1" <?php checked((int) ($options['users_mainsite_redirect'] ?? 0), 1); ?>>
+                                <input type="checkbox" name="ds_functiontoggles[users_mainsite_redirect]" value="1" <?php checked((int) ($options['users_mainsite_redirect'] ?? 0), 1); ?>>
                                 <span class="ds-slider"></span>
                             </label>
                         </td>
