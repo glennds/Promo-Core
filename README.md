@@ -1,0 +1,1 @@
+# ManagePromo-Core
