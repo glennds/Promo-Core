@@ -45,7 +45,7 @@ final class DS_Webshop_Closure {
             'Webshop sluiten',
             'Webshop sluiten',
             'manage_options',
-            'close-webshop',
+            'ds-close-webshop',
             [$this, 'render_page'],
             1
         );
@@ -331,7 +331,7 @@ final class DS_Webshop_Closure {
         $wp_admin_bar->add_node([
             'id'    => 'ds-wc-closure-status',
             'title' => $html,
-            'href'  => admin_url('admin.php?page=ds-wc-closure'),
+            'href'  => admin_url('admin.php?page=ds-close-webshop'),
             'meta'  => ['title' => 'Webshop Closure'],
         ]);
     }

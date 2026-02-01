@@ -3,7 +3,7 @@
  * Plugin Name: ManagePromo Core
  * Plugin URI: https://www.digishock.com/webdevelopment/
  * Description: Diverse functionaliteiten op maat gemaakt voor Promotie.nl — Gebruik de ingebouwde instellingenpagina's om de functies te beheren.
- * Version: 1.0.2
+ * Version: 1.0.3
  * Requires at least: 6.8.2
  * Requires PHP: 8.2
  * Author: Digishock
@@ -75,17 +75,25 @@ function managepromo_sanitize_toggle_options($input) {
 
 add_action('admin_menu', function () {
 
-    add_menu_page(                      // Add top-level menu-item
-        'ManagePromo',                  // Page title
-        'ManagePromo',                  // Menu title
-        'manage_options',                    // Capability (admins)
-        'managepromo',                     // Menu slug
-        'managepromo_features',         // Callback to first submenu-item on clicking toplevel menu-item
-        'dashicons-admin-generic',      // Icon
-        9999                            // Menu position
+    $icon_svg = 'data:image/svg+xml;base64,' . base64_encode(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -95.5 512 512">
+            <path fill="currentColor" d="m249.7 0.1q-0.1 70-0.1 140-48.8-0.6-97.6-1.2c-19.5-0.2-40.5 0.1-56.1 11.8-10.2 7.7-16.8 19.8-19.2 32.4-2.5 12.7-1.1 25.8 2.4 38.2 3.2 11.3 8.5 22.7 18.1 29.4 11.1 7.9 25.7 8.3 39.3 8.3q56.4 0 112.7 0.1 0 30.2-0.1 60.4c0 0.2-87.5 1.2-95.5 1.3-30.3 0.4-64.6 0.6-92.5-13.1-25.2-12.5-42.9-35.9-52.2-62.2-14.3-40.1-13-93.1 15.9-126.9 19.1-22.4 43.4-34.5 72.7-38.1 26.8-3.4 54-0.6 81.1-1.1q0.4-39.7 0.8-79.4z"/>
+            <path fill="currentColor" d="m412.6 78.8c25.1 0 75.2 0.2 75.2 0.2h9.9v58.3c0 0-83.8-0.4-121.3-0.4-3.9 0-6.5 0.4-10.2 0.4-12 0-16.8 4.9-16.6 14.6 0.2 10 7.6 17.8 17.7 18 14.5 0.3 29 0.2 43.5 0.2 16.7-0.1 33.3 0 49.7 3.3 28 5.7 50.2 33.7 51.3 62.5 1 25-3.6 47.2-22.3 65.5-13.4 13.1-29.3 19.3-47.4 19.4-49.6 0.4-160.2 0.3-160.2 0.3v-63.3c0 0 96.2 0.8 139.1 0.8 7.9 0 15.3-0.6 17.2-10.7 2.4-12.5-1.3-17.4-12.3-20.9-6.8-2.1-13.7-2.1-20.6-2.1-21.2 0-42.4 0-63.5-0.1-32.5-0.3-64.7-35.4-63.9-68 0.5-20.1 5.5-37.9 16.8-54.5 10.4-15.4 24.6-22.6 42.7-23.3 4.2-0.2 8.4-0.2 12.7-0.2q31.2 0 62.5 0z"/>
+            <path fill="currentColor" d="m248.5 201.2c-0.3 20.1-15.8 34.7-36.4 34.3-19.4-0.3-35.2-16.9-34.9-36.6 0.2-19.4 16.8-35.1 36.6-34.7 21 0.5 35.1 15.4 34.7 37z"/>
+        </svg>'
     );
 
-    add_submenu_page(                   // First submenu-item, enable/disable features
+    add_menu_page(                  // Add top-level menu-item
+        'ManagePromo',              // Page title
+        'Digishock',                // Menu title
+        'manage_options',           // Capability (admins)
+        'managepromo',              // Menu slug
+        'managepromo_features',     // Callback to first submenu-item on clicking toplevel menu-item
+        $icon_svg,                  // Icon
+        9999                        // Menu position
+    );
+
+    add_submenu_page(               // First submenu-item, enable/disable features
         'managepromo',
         'Functies',
         'Functies',
