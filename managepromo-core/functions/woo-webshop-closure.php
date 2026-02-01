@@ -7,8 +7,9 @@ if (!function_exists('managepromo_is_enabled') || !managepromo_is_enabled('woo_w
 //////////////////////////////////
 
 
-final class KC_Webshop_Closure {
-    const OPTION_KEY = 'kc_webshop_closure';
+
+final class DS_Webshop_Closure {
+    const OPTION_KEY = 'ds_webshop_closure';
 
     public function __construct() {
         // Admin UI
@@ -40,61 +41,61 @@ final class KC_Webshop_Closure {
     public function add_admin_page() {
         // Parent 'woocommerce' puts this submenu under WooCommerce (near "Home")
         add_submenu_page(
-            'woocommerce',
-            __('Webshop Closure', 'kc-wc-closure'),
-            __('Webshop Closure', 'kc-wc-closure'),
-            'manage_woocommerce',
-            'kc-wc-closure',
+            'managepromo',
+            'Webshop sluiten',
+            'Webshop sluiten',
+            'manage_options',
+            'close-webshop',
             [$this, 'render_page'],
-            0
+            1
         );
     }
 
     public function register_settings() {
         register_setting(self::OPTION_KEY, self::OPTION_KEY, [$this, 'sanitize']);
-        add_settings_section('kc_wc_closure_main', '', '__return_false', self::OPTION_KEY);
+        add_settings_section('ds_wc_closure_main', '', '__return_false', self::OPTION_KEY);
 
-        add_settings_field('kc_wc_closure_date', __('Closure Date', 'kc-wc-closure'), function () {
+        add_settings_field('ds_wc_closure_date', __('Closure Date', 'ds-wc-closure'), function () {
             $o = self::get_settings(); ?>
             <input type="date" name="<?php echo esc_attr(self::OPTION_KEY); ?>[date]" value="<?php echo esc_attr($o['date']); ?>" />
-        <?php }, self::OPTION_KEY, 'kc_wc_closure_main');
+        <?php }, self::OPTION_KEY, 'ds_wc_closure_main');
 
-        add_settings_field('kc_wc_closure_time', __('Closure Time', 'kc-wc-closure'), function () {
+        add_settings_field('ds_wc_closure_time', __('Closure Time', 'ds-wc-closure'), function () {
             $o = self::get_settings(); ?>
             <input type="time" name="<?php echo esc_attr(self::OPTION_KEY); ?>[time]" value="<?php echo esc_attr($o['time']); ?>" />
-            <p class="description"><?php esc_html_e('Uses your site timezone (Settings &#8594; General).', 'kc-wc-closure'); ?></p>
-        <?php }, self::OPTION_KEY, 'kc_wc_closure_main');
+            <p class="description"><?php esc_html_e('Uses your site timezone (Settings &#8594; General).', 'ds-wc-closure'); ?></p>
+        <?php }, self::OPTION_KEY, 'ds_wc_closure_main');
 
-        add_settings_field('kc_wc_closure_redirect', __('Redirect Page', 'kc-wc-closure'), function () {
+        add_settings_field('ds_wc_closure_redirect', __('Redirect Page', 'ds-wc-closure'), function () {
             $o = self::get_settings();
             wp_dropdown_pages([
                 'name'              => self::OPTION_KEY . '[redirect_page_id]',
                 'selected'          => (int) $o['redirect_page_id'],
-                'show_option_none'  => __('— Select a page —', 'kc-wc-closure'),
+                'show_option_none'  => __('— Select a page —', 'ds-wc-closure'),
             ]);
-        }, self::OPTION_KEY, 'kc_wc_closure_main');
+        }, self::OPTION_KEY, 'ds_wc_closure_main');
 
-        add_settings_field('kc_wc_closure_urls', __('Blocked URLs', 'kc-wc-closure'), function () {
+        add_settings_field('ds_wc_closure_urls', __('Blocked URLs', 'ds-wc-closure'), function () {
             $o   = self::get_settings();
             $val = (string) $o['blocked_urls']; ?>
-            <textarea name="<?php echo esc_attr(self::OPTION_KEY); ?>[blocked_urls]" rows="7" class="large-text code" placeholder="/shop
-                /product-category/
-                /categorie/alle-producten/
-                "><?php echo esc_textarea($val); ?>
+            <textarea name="<?php echo esc_attr(self::OPTION_KEY); ?>[blocked_urls]" rows="7" class="large-text code" placeholder="/shop/
+/product-category/
+/categorie/alle-producten/">
+                <?php echo esc_textarea($val); ?>
             </textarea>
             <p class="description">
-                <?php esc_html_e('One per line. Enter paths like "/shop" or "/product-category/shoes".', 'kc-wc-closure'); ?>
-                <?php esc_html_e('Matches the exact path and any children (e.g., "/shop/page/2") automatically. Works even if your site runs under a subdirectory like "/demo2025".', 'kc-wc-closure'); ?>
+                <?php esc_html_e('One per line. Enter paths like "/shop" or "/product-category/shoes".', 'ds-wc-closure'); ?>
+                <?php esc_html_e('Matches the exact path and any children (e.g., "/shop/page/2") automatically. Works even if your site runs under a subdirectory like "/demo2025".', 'ds-wc-closure'); ?>
             </p>
-        <?php }, self::OPTION_KEY, 'kc_wc_closure_main');
+        <?php }, self::OPTION_KEY, 'ds_wc_closure_main');
 
-        add_settings_field('kc_wc_closure_admin_bypass', __('Admin Bypass', 'kc-wc-closure'), function () {
+        add_settings_field('ds_wc_closure_admin_bypass', __('Admin Bypass', 'ds-wc-closure'), function () {
             $o = self::get_settings(); ?>
             <label>
                 <input type="checkbox" name="<?php echo esc_attr(self::OPTION_KEY); ?>[admin_bypass]" value="1" <?php checked((int)$o['admin_bypass'], 1); ?>/>
-                <?php esc_html_e('Allow administrators to bypass redirects (for testing).', 'kc-wc-closure'); ?>
+                <?php esc_html_e('Allow administrators to bypass redirects (for testing).', 'ds-wc-closure'); ?>
             </label>
-        <?php }, self::OPTION_KEY, 'kc_wc_closure_main');
+        <?php }, self::OPTION_KEY, 'ds_wc_closure_main');
     }
 
     public function sanitize($input) {
@@ -122,19 +123,19 @@ final class KC_Webshop_Closure {
 
     public function render_page() {
         if ( ! current_user_can('manage_woocommerce') ) {
-            wp_die(__('You do not have permission to access this page.', 'kc-wc-closure'));
+            wp_die(__('You do not have permission to access this page.', 'ds-wc-closure'));
         }
 
         $status = $this->get_status();
         ?>
         <div class="wrap">
-            <h1><?php esc_html_e('Webshop Closure', 'kc-wc-closure'); ?></h1>
+            <h1><?php esc_html_e('Webshop Closure', 'ds-wc-closure'); ?></h1>
 
             <div class="card" style="max-width:920px;">
-                <h2 class="title"><?php esc_html_e('Schedule & Redirect', 'kc-wc-closure'); ?></h2>
+                <h2 class="title"><?php esc_html_e('Schedule & Redirect', 'ds-wc-closure'); ?></h2>
 
                 <p>
-                    <strong><?php esc_html_e('Status:', 'kc-wc-closure'); ?></strong>
+                    <strong><?php esc_html_e('Status:', 'ds-wc-closure'); ?></strong>
                     <?php echo wp_kses_post($status['label_html']); ?>
                 </p>
 
@@ -142,18 +143,18 @@ final class KC_Webshop_Closure {
                     <?php
                     settings_fields(self::OPTION_KEY);
                     do_settings_sections(self::OPTION_KEY);
-                    submit_button(__('Save settings', 'kc-wc-closure'));
+                    submit_button(__('Save settings', 'ds-wc-closure'));
                     ?>
                 </form>
             </div>
 
             <div class="card" style="max-width:920px;">
-                <h2 class="title"><?php esc_html_e('How it works', 'kc-wc-closure'); ?></h2>
+                <h2 class="title"><?php esc_html_e('How it works', 'ds-wc-closure'); ?></h2>
                 <ol>
-                    <li><?php esc_html_e('Pick a closure Date & Time (site timezone).', 'kc-wc-closure'); ?></li>
-                    <li><?php esc_html_e('Choose a Page to redirect visitors to.', 'kc-wc-closure'); ?></li>
-                    <li><?php esc_html_e('List the shop/category paths (one per line) that should be blocked after closure. Children are matched automatically.', 'kc-wc-closure'); ?></li>
-                    <li><?php esc_html_e('Once the time passes, requests to those paths will be redirected.', 'kc-wc-closure'); ?></li>
+                    <li><?php esc_html_e('Pick a closure Date & Time (site timezone).', 'ds-wc-closure'); ?></li>
+                    <li><?php esc_html_e('Choose a Page to redirect visitors to.', 'ds-wc-closure'); ?></li>
+                    <li><?php esc_html_e('List the shop/category paths (one per line) that should be blocked after closure. Children are matched automatically.', 'ds-wc-closure'); ?></li>
+                    <li><?php esc_html_e('Once the time passes, requests to those paths will be redirected.', 'ds-wc-closure'); ?></li>
                 </ol>
             </div>
         </div>
@@ -161,7 +162,7 @@ final class KC_Webshop_Closure {
     }
 
     public function enqueue_admin_css($hook) {
-        if (isset($_GET['page']) && $_GET['page'] === 'kc-wc-closure') {
+        if (isset($_GET['page']) && $_GET['page'] === 'ds-wc-closure') {
             // Using core .card styles; no extra CSS needed
         }
     }
@@ -328,12 +329,12 @@ final class KC_Webshop_Closure {
         </span>';
 
         $wp_admin_bar->add_node([
-            'id'    => 'kc-wc-closure-status',
+            'id'    => 'ds-wc-closure-status',
             'title' => $html,
-            'href'  => admin_url('admin.php?page=kc-wc-closure'),
+            'href'  => admin_url('admin.php?page=ds-wc-closure'),
             'meta'  => ['title' => 'Webshop Closure'],
         ]);
     }
 }
 
-new KC_Webshop_Closure();
+new DS_Webshop_Closure();
