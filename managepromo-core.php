@@ -1,9 +1,9 @@
 <?php
 /*
- * Plugin Name: ManagePromo core
+ * Plugin Name: ManagePromo Core
  * Plugin URI: https://www.digishock.com/webdevelopment/
  * Description: Diverse functionaliteiten op maat gemaakt voor Promotie.nl — Gebruik de ingebouwde instellingenpagina's om de functies te beheren.
- * Version: 1.0
+ * Version: 1.0.1
  * Requires at least: 6.8.2
  * Requires PHP: 8.2
  * Author: Digishock
@@ -27,7 +27,7 @@ if (managepromo_is_enabled('users_restrict_login_to_subsite'))             {requ
 if (managepromo_is_enabled('users_redirect_guests_to_login'))              {require_once plugin_dir_path(__FILE__) . 'functions/users-redirect-guests-to-login.php';}
 if (managepromo_is_enabled('users_profile_update_popup'))                  {require_once plugin_dir_path(__FILE__) . 'functions/users-profile-update-popup.php';}
 if (managepromo_is_enabled('users_mainsite_redirect'))                     {require_once plugin_dir_path(__FILE__) . 'functions/users-mainsite-redirect.php';}
-if (managepromo_is_enabled('woo_disable_downloads'))                       {require_once plugin_dir_path(__FILE__) . 'functions/woo-disable-downloadable-products.php';}
+if (managepromo_is_enabled('woo_disable_downloads'))                       {require_once plugin_dir_path(__FILE__) . 'functions/woo-disable-downloads.php';}
 if (managepromo_is_enabled('woo_giftpoints_currency'))                     {require_once plugin_dir_path(__FILE__) . 'functions/woo-giftpoints-currency.php';}
 if (managepromo_is_enabled('woo_accountpage_optimization'))                {require_once plugin_dir_path(__FILE__) . 'functions/woo-accountpage-optimization.php';}
 if (managepromo_is_enabled('woo_change_neworder_email'))                   {require_once plugin_dir_path(__FILE__) . 'functions/woo-change-admin-neworder-email.php';}
@@ -53,7 +53,7 @@ add_action('wp_enqueue_scripts', function() {
 //
 // Create admin menu page
 add_action('admin_init', function() {
-    register_setting('managepromo_settings', 'managepromo_function_toggles', [
+    register_setting('managepromo_settings', 'ds_functiontoggles', [
     'type' => 'array',
     'sanitize_callback' => 'managepromo_sanitize_toggle_options'
     ]);
@@ -77,24 +77,45 @@ function managepromo_sanitize_toggle_options($input) {
         'woo_webshop_closure' => 0
     ];
 
-    if (!is_array($input)) {$input = [];}   // Prevent null if function is toggled off    
-    return array_merge($defaults, array_map('absint', $input)); // Fill empty value with 0
+    if (!is_array($input)) {$input = [];}                           // Prevent null if function is toggled off    
+    return array_merge($defaults, array_map('absint', $input));     // Fill empty value with 0
 }
 
-add_action('admin_menu', function() {
-    add_submenu_page(
-        'options-general.php',
-        'managepromo Functies',
-        'managepromo Functies',
-        'manage_options',
-        'managepromo-functions',
-        'managepromo_functions_page'
+add_action('admin_menu', function () {
+    $menu_slug = 'managepromo';
+    $capability = 'manage_options';
+
+    add_menu_page(                      // Add top-level menu-item
+        'ManagePromo',                  // Page title
+        'ManagePromo',                  // Menu title
+        $capability,                    // Capability (admins)
+        $menu_slug,                     // Menu slug
+        'managepromo_features',         // Callback to first submenu-item on clicking toplevel menu-item
+        'dashicons-admin-generic',      // Icon
+        9999                            // Menu position
+    );
+
+    add_submenu_page(                   // First submenu-item, enable/disable features
+        $menu_slug,
+        'Functies',
+        'Functies',
+        $capability,
+        $menu_slug,
+        'managepromo_features'
     );
 });
 
-// Generatie the page content
-function managepromo_functions_page() {
-    $options = get_option('managepromo_function_toggles', [
+
+
+//
+// Generate the page content
+function managepromo_features() {
+    
+    if (!current_user_can('manage_options')) {
+        wp_die(__('Je hebt geen toegang tot deze pagina.'));
+    }
+
+    $options = get_option('ds_functiontoggles', [
         'disable_gutenberg' => 0,
         'site_logo' => 0,
         'users_disable_email_bulkgen_exportimport' => 0,
@@ -112,218 +133,197 @@ function managepromo_functions_page() {
     ]);
     ?>
     <div class="wrap">
-        <h1>managepromo Plugin Instellingen</h1>
+        <h1>ManagePromo Functies</h1>
 
         <form method="post" action="options.php">
-            <?php
-                settings_fields('managepromo_settings');
-                $options = get_option('managepromo_function_toggles', [
-                    'disable_gutenberg' => 0,
-                    'site_logo' => 0,
-                    'users_disable_email_bulkgen_exportimport' => 0,
-                    'users_restrict_login_to_subsite' => 0,
-                    'users_redirect_guests_to_login' => 0,
-                    'users_profile_update_popup' => 0,
-                    'users_mainsite_redirect' => 0,
-                    'woo_disable_downloads' => 0,
-                    'woo_giftpoints_currency' => 0,
-                    'woo_accountpage_optimization' => 0,
-                    'woo_change_neworder_email' => 0,
-                    'woo_pricing_filters' => 0,
-                    'woo_limit_products_per_order' => 0,
-                    'woo_webshop_closure' => 0
-                ]);
-            ?>
+            <?php settings_fields('managepromo_settings'); ?>
 
-            <table class="wp-list-table widefat fixed striped">
+            <table class="ds-optionstable wp-list-table widefat fixed striped">
                 <thead>
                     <tr>
-                        <th scope="col">Functie</th>
-                        <th scope="col" style="width: 120px;">Actief</th>
+                        <th scope="col"><h3>Functionaliteiten - Algemeen</h3></th>
+                        <th scope="col" style="width: 120px;"><h3>Status</h3></th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td style="font-weight: 600">Algemeen - WebsiteNazorg.nl - Schakel Gutenberg uit</td>
+                        <td style="font-weight: 600">Site logo toevoegen aan instellingen</td>
                         <td>
-                            <input type="hidden" name="managepromo_function_toggles[disable_gutenberg]" value="0">
-                            <label class="kc-toggle">
-                                <input type="checkbox" name="managepromo_function_toggles[disable_gutenberg]" value="1" <?php checked((int) ($options['disable_gutenberg'] ?? 0), 1); ?>>
-                                <span class="kc-slider"></span>
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="font-weight: 600">Algemeen - Site logo toevoegen aan instellingen</td>
-                        <td>
-                            <input type="hidden" name="managepromo_function_toggles[site_logo]" value="0">
-                            <label class="kc-toggle">
-                                <input type="checkbox" name="managepromo_function_toggles[site_logo]" value="1" <?php checked((int) ($options['site_logo'] ?? 0), 1); ?>>
-                                <span class="kc-slider"></span>
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="font-weight: 600">Users - Accountbeheer wijzigingen, bulk accountgeneratie en import/export van gebruikers/orders/klantdata.</td>
-                        <td>
-                            <input type="hidden" name="managepromo_function_toggles[users_disable_email_bulkgen_exportimport]" value="0">
-                            <label class="kc-toggle">
-                                <input type="checkbox" name="managepromo_function_toggles[users_disable_email_bulkgen_exportimport]" value="1" <?php checked((int) ($options['users_disable_email_bulkgen_exportimport'] ?? 0), 1); ?>>
-                                <span class="kc-slider"></span>
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="font-weight: 600">Users - Beperk gebruikers zodat ze alleen kunnen inloggen op de subsites waaraan ze gekoppeld zijn</td>
-                        <td>
-                            <input type="hidden" name="managepromo_function_toggles[users_restrict_login_to_subsite]" value="0">
-                            <label class="kc-toggle">
-                                <input type="checkbox" name="managepromo_function_toggles[users_restrict_login_to_subsite]" value="1" <?php checked((int) ($options['users_restrict_login_to_subsite'] ?? 0), 1); ?>>
-                                <span class="kc-slider"></span>
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="font-weight: 600">Users - Uitgelogde website bezoekers omleiden naar inlogpagina van subsite</td>
-                        <td>
-                            <input type="hidden" name="managepromo_function_toggles[users_redirect_guests_to_login]" value="0">
-                            <label class="kc-toggle">
-                                <input type="checkbox" name="managepromo_function_toggles[users_redirect_guests_to_login]" value="1" <?php checked((int) ($options['users_redirect_guests_to_login'] ?? 0), 1); ?>>
-                                <span class="kc-slider"></span>
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="font-weight: 600">Users - Toon een popup aan nieuwe gebruikers om contactgegevens in te vullen</td>
-                        <td>
-                            <input type="hidden" name="managepromo_function_toggles[users_profile_update_popup]" value="0">
-                            <label class="kc-toggle">
-                                <input type="checkbox" name="managepromo_function_toggles[users_profile_update_popup]" value="1" <?php checked((int) ($options['users_profile_update_popup'] ?? 0), 1); ?>>
-                                <span class="kc-slider"></span>
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="font-weight: 600">Users - Redirect gebruikers naar /inloggen/ als ze ingelogd zijn, klant zijn en homepage bezoeken (ALLEEN VOOR GEGEVENSBRON)</td>
-                        <td>
-                            <input type="hidden" name="managepromo_function_toggles[users_mainsite_redirect]" value="0">
-                            <label class="kc-toggle">
-                                <input type="checkbox" name="managepromo_function_toggles[users_mainsite_redirect]" value="1" <?php checked((int) ($options['users_mainsite_redirect'] ?? 0), 1); ?>>
-                                <span class="kc-slider"></span>
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="font-weight: 600">WooCommerce - Downloadbare producten uitschakelen</td>
-                        <td>
-                            <input type="hidden" name="managepromo_function_toggles[woo_disable_downloads]" value="0">
-                            <label class="kc-toggle">
-                                <input type="checkbox" name="managepromo_function_toggles[woo_disable_downloads]" value="1" <?php checked((int) ($options['woo_disable_downloads'] ?? 0), 1); ?>>
-                                <span class="kc-slider"></span>
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="font-weight: 600">WooCommerce - Verander WooCommerce valuta naar cadeaupunten</td>
-                        <td>
-                            <input type="hidden" name="managepromo_function_toggles[woo_giftpoints_currency]" value="0">
-                            <label class="kc-toggle">
-                                <input type="checkbox" name="managepromo_function_toggles[woo_giftpoints_currency]" value="1" <?php checked((int) ($options['woo_giftpoints_currency'] ?? 0), 1); ?>>
-                                <span class="kc-slider"></span>
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="font-weight: 600">WooCommerce - WooCommerce 'My Account' Optimalisatie</td>
-                        <td>
-                            <input type="hidden" name="managepromo_function_toggles[woo_accountpage_optimization]" value="0">
-                            <label class="kc-toggle">
-                                <input type="checkbox" name="managepromo_function_toggles[woo_accountpage_optimization]" value="1" <?php checked((int) ($options['woo_accountpage_optimization'] ?? 0), 1); ?>>
-                                <span class="kc-slider"></span>
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="font-weight: 600">WooCommerce - Wijzig het template voor de admin nieuwe order e-mail</td>
-                        <td>
-                            <input type="hidden" name="managepromo_function_toggles[woo_change_neworder_email]" value="0">
-                            <label class="kc-toggle">
-                                <input type="checkbox" name="managepromo_function_toggles[woo_change_neworder_email]" value="1" <?php checked((int) ($options['woo_change_neworder_email'] ?? 0), 1); ?>>
-                                <span class="kc-slider"></span>
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="font-weight: 600">WooCommerce - Extra weergavefilters op basis van Inkoopprijs & Reguliere Prijs in het backoffice productoverzicht</td>
-                        <td>
-                            <input type="hidden" name="managepromo_function_toggles[woo_pricing_filters]" value="0">
-                            <label class="kc-toggle">
-                                <input type="checkbox" name="managepromo_function_toggles[woo_pricing_filters]" value="1" <?php checked((int) ($options['woo_pricing_filters'] ?? 0), 1); ?>>
-                                <span class="kc-slider"></span>
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="font-weight: 600">WooCommerce - Beperk het aantal producten tot 1 artikel per order</td>
-                        <td>
-                            <input type="hidden" name="managepromo_function_toggles[woo_limit_products_per_order]" value="0">
-                            <label class="kc-toggle">
-                                <input type="checkbox" name="managepromo_function_toggles[woo_limit_products_per_order]" value="1" <?php checked((int) ($options['woo_limit_products_per_order'] ?? 0), 1); ?>>
-                                <span class="kc-slider"></span>
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="font-weight: 600">WooCommerce - Automatische sluitingsdatum van de webshop instellen</td>
-                        <td>
-                            <input type="hidden" name="managepromo_function_toggles[woo_webshop_closure]" value="0">
-                            <label class="kc-toggle">
-                                <input type="checkbox" name="managepromo_function_toggles[woo_webshop_closure]" value="1" <?php checked((int) ($options['woo_webshop_closure'] ?? 0), 1); ?>>
-                                <span class="kc-slider"></span>
+                            <input type="hidden" name="ds_functiontoggles[site_logo]" value="0">
+                            <label class="ds-toggle">
+                                <input type="checkbox" name="ds_functiontoggles[site_logo]" value="1" <?php checked((int) ($options['site_logo'] ?? 0), 1); ?>>
+                                <span class="ds-slider"></span>
                             </label>
                         </td>
                     </tr>
                 </tbody>
             </table>
 
+            <table class="ds-optionstable wp-list-table widefat fixed striped">
+                <thead>
+                    <tr>
+                        <th scope="col"><h3>Functionaliteiten - WooCommerce</h3></th>
+                        <th scope="col" style="width: 120px;"><h3>Status</h3></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="font-weight: 600">VERBETEREN - Wijzig het template voor de admin nieuwe order e-mail</td>
+                        <td>
+                            <input type="hidden" name="ds_functiontoggles[woo_change_neworder_email]" value="0">
+                            <label class="ds-toggle">
+                                <input type="checkbox" name="ds_functiontoggles[woo_change_neworder_email]" value="1" <?php checked((int) ($options['woo_change_neworder_email'] ?? 0), 1); ?>>
+                                <span class="ds-slider"></span>
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600">Productoverzicht weergavefilters op basis van Inkoopprijs & Reguliere Prijs</td>
+                        <td>
+                            <input type="hidden" name="ds_functiontoggles[woo_pricing_filters]" value="0">
+                            <label class="ds-toggle">
+                                <input type="checkbox" name="ds_functiontoggles[woo_pricing_filters]" value="1" <?php checked((int) ($options['woo_pricing_filters'] ?? 0), 1); ?>>
+                                <span class="ds-slider"></span>
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600">VERBETEREN - Automatische sluitingsdatum instellen</td>
+                        <td>
+                            <input type="hidden" name="ds_functiontoggles[woo_webshop_closure]" value="0">
+                            <label class="ds-toggle">
+                                <input type="checkbox" name="ds_functiontoggles[woo_webshop_closure]" value="1" <?php checked((int) ($options['woo_webshop_closure'] ?? 0), 1); ?>>
+                                <span class="ds-slider"></span>
+                            </label>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <table class="ds-optionstable wp-list-table widefat fixed striped">
+                <thead>
+                    <tr>
+                        <th scope="col"><h3>Functionaliteiten - Gebruikersbeheer</h3></th>
+                        <th scope="col" style="width: 120px;"><h3>Status</h3></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="font-weight: 600">Uitgelogde website bezoekers omleiden naar inlogpagina van subsite</td>
+                        <td>
+                            <input type="hidden" name="managepromo_function_toggles[users_redirect_guests_to_login]" value="0">
+                            <label class="ds-toggle">
+                                <input type="checkbox" name="managepromo_function_toggles[users_redirect_guests_to_login]" value="1" <?php checked((int) ($options['users_redirect_guests_to_login'] ?? 0), 1); ?>>
+                                <span class="ds-slider"></span>
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600">Beperk inloggen voor klant tot alleen gekoppelde subsites</td>
+                        <td>
+                            <input type="hidden" name="managepromo_function_toggles[users_restrict_login_to_subsite]" value="0">
+                            <label class="ds-toggle">
+                                <input type="checkbox" name="managepromo_function_toggles[users_restrict_login_to_subsite]" value="1" <?php checked((int) ($options['users_restrict_login_to_subsite'] ?? 0), 1); ?>>
+                                <span class="ds-slider"></span>
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600">Accountbeheer wijzigingen, bulk accountgeneratie en import/export van gebruikers/orders/klantdata.</td>
+                        <td>
+                            <input type="hidden" name="managepromo_function_toggles[users_disable_email_bulkgen_exportimport]" value="0">
+                            <label class="ds-toggle">
+                                <input type="checkbox" name="managepromo_function_toggles[users_disable_email_bulkgen_exportimport]" value="1" <?php checked((int) ($options['users_disable_email_bulkgen_exportimport'] ?? 0), 1); ?>>
+                                <span class="ds-slider"></span>
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600">VERBETEREN - Redirect gebruikers naar /inloggen/ als ze ingelogd zijn, klant zijn en homepage bezoeken (ALLEEN VOOR GEGEVENSBRON)</td>
+                        <td>
+                            <input type="hidden" name="managepromo_function_toggles[users_mainsite_redirect]" value="0">
+                            <label class="ds-toggle">
+                                <input type="checkbox" name="managepromo_function_toggles[users_mainsite_redirect]" value="1" <?php checked((int) ($options['users_mainsite_redirect'] ?? 0), 1); ?>>
+                                <span class="ds-slider"></span>
+                            </label>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <table class="ds-optionstable wp-list-table widefat fixed striped">
+                <thead>
+                    <tr>
+                        <th scope="col"><h3>Functionaliteiten - Optimalisatie</h3></th>
+                        <th scope="col" style="width: 120px;"><h3>Status</h3></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="font-weight: 600">WebsiteNazorg.nl - Schakel Gutenberg uit</td>
+                        <td>
+                            <input type="hidden" name="ds_functiontoggles[disable_gutenberg]" value="0">
+                            <label class="ds-toggle">
+                                <input type="checkbox" name="ds_functiontoggles[disable_gutenberg]" value="1" <?php checked((int) ($options['disable_gutenberg'] ?? 0), 1); ?>>
+                                <span class="ds-slider"></span>
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600">Downloadbare producten uitschakelen</td>
+                        <td>
+                            <input type="hidden" name="ds_functiontoggles[woo_disable_downloads]" value="0">
+                            <label class="ds-toggle">
+                                <input type="checkbox" name="ds_functiontoggles[woo_disable_downloads]" value="1" <?php checked((int) ($options['woo_disable_downloads'] ?? 0), 1); ?>>
+                                <span class="ds-slider"></span>
+                            </label>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            
+
+
             <div style="display: flex; gap: 10px">
-                <p class="submit"><button type="button" class="button" id="kc-disable-all">Alles uitschakelen</button></p>
-				<p class="submit"><button type="button" class="button" id="kc-enable-all">Alles inschakelen</button></p>
+                <p class="submit"><button type="button" class="button" id="ds-disable-all">Alles uitschakelen</button></p>
+				<p class="submit"><button type="button" class="button" id="ds-enable-all">Alles inschakelen</button></p>
             	<?php submit_button('Wijzigingen opslaan'); ?>
             </div>
         </form>
+
+
+
         <!-- Functionality for 'Enable/Disable all' buttons -->
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                var enableBtn = document.getElementById('kc-enable-all');
-                var disableBtn = document.getElementById('kc-disable-all');
+                var enableBtn = document.getElementById('ds-enable-all');
+                var disableBtn = document.getElementById('ds-disable-all');
                 var form = enableBtn.closest('form');
-                var checkboxes = form.querySelectorAll('input[type="checkbox"][name^="managepromo_function_toggles"]');
+                var checkboxes = form.querySelectorAll('input[type="checkbox"][name^="ds_functiontoggles"]');
 
-                enableBtn.addEventListener('click', function() {
-                    checkboxes.forEach(function(cb) { cb.checked = true; });
-                });
-
-                disableBtn.addEventListener('click', function() {
-                    checkboxes.forEach(function(cb) { cb.checked = false; });
-                });
+                enableBtn.addEventListener('click', function() {checkboxes.forEach(function(cb) { cb.checked = true; });});
+                disableBtn.addEventListener('click', function() {checkboxes.forEach(function(cb) { cb.checked = false; });});
             });
             </script>
     </div>
     <?php
 }
 
+
+
 // Load the page styles
-add_action('admin_enqueue_scripts', function($hook) {
-    if ($hook === 'settings_page_managepromo-functions') {
-        wp_enqueue_style('managepromo-admin-style',
-            plugin_dir_url(__FILE__) . 'assets/admin-style.css', [],
-            filemtime(plugin_dir_path(__FILE__) . 'assets/admin-style.css')
-        );}
+add_action('admin_enqueue_scripts', function ($hook) {
+    if ($hook !== 'toplevel_page_managepromo') {return;} // Only load on this admin page
+    wp_enqueue_style(
+        'admin-style',
+        plugin_dir_url(__FILE__) . 'assets/admin-style.css',
+        [],
+        filemtime(plugin_dir_path(__FILE__) . 'assets/admin-style.css')
+    );
 });
 
 // Allow (de)activating functions Helper
 function managepromo_is_enabled($key) {
-    $options = get_option('managepromo_function_toggles', []);
+    $options = get_option('ds_functiontoggles', []);
     return isset($options[$key]) && $options[$key] === 1;
 }
