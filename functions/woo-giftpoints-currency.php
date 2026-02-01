@@ -1,6 +1,6 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) {exit;}
-if (!function_exists('keuzeconcept_is_enabled') || !keuzeconcept_is_enabled('woo_giftpoints_currency')) {return;}
+if (!function_exists('managepromo_is_enabled') || !managepromo_is_enabled('woo_giftpoints_currency')) {return;}
 
 //////////////////////////////////
 // Function contents start HERE //
@@ -23,7 +23,7 @@ add_filter('woocommerce_currency_symbol', function($currency_symbol, $currency) 
 
 // 3. Forceer WooCommerce om altijd europrijzen te gebruiken op de achtergrond
 add_filter('woocommerce_currency', function($currency) {
-    if (function_exists('keuzeconcept_is_enabled') && keuzeconcept_is_enabled('woo_giftpoints_currency')) {
+    if (function_exists('managepromo_is_enabled') && managepromo_is_enabled('woo_giftpoints_currency')) {
         return 'GIFT';
     }
     return $currency;

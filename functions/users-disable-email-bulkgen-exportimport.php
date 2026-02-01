@@ -1,6 +1,6 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) {exit;}
-if (!function_exists('keuzeconcept_is_enabled') || !keuzeconcept_is_enabled('users_disable_email_bulkgen_exportimport')) {return;}
+if (!function_exists('managepromo_is_enabled') || !managepromo_is_enabled('users_disable_email_bulkgen_exportimport')) {return;}
 
 //////////////////////////////////
 // Function contents start HERE //
@@ -10,15 +10,15 @@ if (!function_exists('keuzeconcept_is_enabled') || !keuzeconcept_is_enabled('use
 
 /**
  * -----------------------------------------------------------------------------
- * Keuzeconcept User Batch &#65533; Single page (Users &#8594; Bulk management)
+ * managepromo User Batch &#65533; Single page (Users &#8594; Bulk management)
  * - Generate random users
  * - Export current site's users (CSV)
  * - Import users (update by username; optional create)
  * -----------------------------------------------------------------------------
  */
 
-class Keuzeconcept_User_Batch {
-    const DUMMY_DOMAIN    = 'dummy.keuzeconcept.com';
+class managepromo_User_Batch {
+    const DUMMY_DOMAIN    = 'dummy.managepromo.com';
     const META_PLAIN_PW   = 'kc_plain_password';
     const NONCE_GEN       = 'kc_gen_nonce';
     const NONCE_EXP       = 'kc_exp_nonce';
@@ -256,7 +256,7 @@ class Keuzeconcept_User_Batch {
         }
 
         add_action( 'user_register', function( $user_id ) use ( $p ) {
-            if ( $p ) update_user_meta( $user_id, Keuzeconcept_User_Batch::META_PLAIN_PW, $p );
+            if ( $p ) update_user_meta( $user_id, managepromo_User_Batch::META_PLAIN_PW, $p );
         } );
     }
 
@@ -408,7 +408,7 @@ class Keuzeconcept_User_Batch {
                     }
                     ?>
                     <div style="margin-top:12px;">
-                        <label for="kc_import_role_default"><strong>Standaard rol voor nieuwe/geüpdatete gebruikers</strong></label><br>
+                        <label for="kc_import_role_default"><strong>Standaard rol voor nieuwe/geï¿½pdatete gebruikers</strong></label><br>
                         <select id="kc_import_role_default" name="kc_import_role_default" style="min-width:240px;">
                             <?php foreach ( $roles as $role_key => $label ) : ?>
                                 <option value="<?php echo esc_attr( $role_key ); ?>" <?php selected( $role_key, $default_role ); ?>>
@@ -641,7 +641,7 @@ class Keuzeconcept_User_Batch {
         fclose( $out );
     }
 }
-new Keuzeconcept_User_Batch();
+new managepromo_User_Batch();
 
 /* -----------------------------------------------------------------------------
  * Constants / helpers used outside the class
@@ -688,8 +688,8 @@ function kc_write_csv_header( $out ) {
 function kc_stream_users_for_current_blog( $out, $blog_id, $role = '__all' ) {
     $has_wc = function_exists( 'wc_get_orders' );
 
-    $pw_meta_key = ( class_exists( 'Keuzeconcept_User_Batch' ) )
-        ? Keuzeconcept_User_Batch::META_PLAIN_PW
+    $pw_meta_key = ( class_exists( 'managepromo_User_Batch' ) )
+        ? managepromo_User_Batch::META_PLAIN_PW
         : 'kc_plain_password';
 
     $args = [
@@ -982,7 +982,7 @@ function kc_import_update_users_from_csv() {
             continue;
         }
 
-        $fallback_domain = class_exists( 'Keuzeconcept_User_Batch' ) ? Keuzeconcept_User_Batch::DUMMY_DOMAIN : 'example.invalid';
+        $fallback_domain = class_exists( 'managepromo_User_Batch' ) ? managepromo_User_Batch::DUMMY_DOMAIN : 'example.invalid';
 
         // Email is optional for creation; use safe fallback when empty/invalid.
         if ( ! $email_valid ) {
@@ -1277,9 +1277,9 @@ function kc_resolve_role_key( $input, array $editable_roles_map ) {
 
     $norms = [];
     $norms[] = strtolower( $in );
-    $norms[] = strtolower( str_replace( ['-', ' '], '_', $in ) ); // “Shop Manager” &#8594; “shop_manager”
-    $norms[] = strtolower( str_replace( ['_', ' '], '-', $in ) ); // “shop_manager” &#8594; “shop-manager”
-    $norms[] = strtolower( str_replace( ['-', '_'], ' ', $in ) ); // “shop-manager” &#8594; “shop manager”
+    $norms[] = strtolower( str_replace( ['-', ' '], '_', $in ) ); // ï¿½Shop Managerï¿½ &#8594; ï¿½shop_managerï¿½
+    $norms[] = strtolower( str_replace( ['_', ' '], '-', $in ) ); // ï¿½shop_managerï¿½ &#8594; ï¿½shop-managerï¿½
+    $norms[] = strtolower( str_replace( ['-', '_'], ' ', $in ) ); // ï¿½shop-managerï¿½ &#8594; ï¿½shop managerï¿½
 
     foreach ( array_unique( $norms ) as $candidate ) {
         if ( isset( $lut[ $candidate ] ) ) {

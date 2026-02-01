@@ -1,6 +1,6 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) {exit;}
-if (!function_exists('keuzeconcept_is_enabled') || !keuzeconcept_is_enabled('woo_limit_products_per_order')) {return;}
+if (!function_exists('managepromo_is_enabled') || !managepromo_is_enabled('woo_limit_products_per_order')) {return;}
 
 //////////////////////////////////
 // Function contents start HERE //

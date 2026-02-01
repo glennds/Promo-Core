@@ -1,6 +1,6 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) {exit;}
-if (!function_exists('keuzeconcept_is_enabled') || !keuzeconcept_is_enabled('site_logo')) {return;}
+if (!function_exists('managepromo_is_enabled') || !managepromo_is_enabled('site_logo')) {return;}
 
 //////////////////////////////////
 // Function contents start HERE //

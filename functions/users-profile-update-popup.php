@@ -2,7 +2,7 @@
 if ( ! defined('ABSPATH') ) exit;
 
 // Feature flag (keep your existing switch)
-if ( function_exists('keuzeconcept_is_enabled') && ! keuzeconcept_is_enabled('users_profile_update_popup') ) {
+if ( function_exists('managepromo_is_enabled') && ! managepromo_is_enabled('users_profile_update_popup') ) {
     return;
 }
 
@@ -86,7 +86,7 @@ add_action('save_post_breakdance_form_res', function($post_id, $post, $update){
     kc_profile_sync_apply($data, $user_id);
 }, 10, 3);
 
-/** Path B: explicit AJAX endpoint we’ll call from JS on success (guaranteed even if no CPT is saved) */
+/** Path B: explicit AJAX endpoint weï¿½ll call from JS on success (guaranteed even if no CPT is saved) */
 add_action('wp_ajax_kc_breakdance_profile_sync', function () {
     if ( ! is_user_logged_in() ) wp_send_json_error(['msg'=>'not_logged_in'], 401);
     check_ajax_referer('kc_profile_sync');
