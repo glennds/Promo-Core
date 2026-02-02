@@ -45,7 +45,7 @@ final class DS_Webshop_Closure {
             'Webshop sluiten',
             'Webshop sluiten',
             'manage_options',
-            'ds-close-webshop',
+            'close-webshop',
             [$this, 'render_page'],
             1
         );
@@ -78,10 +78,10 @@ final class DS_Webshop_Closure {
         add_settings_field('ds_wc_closure_urls', __('Blocked URLs', 'ds-wc-closure'), function () {
             $o   = self::get_settings();
             $val = (string) $o['blocked_urls']; ?>
-            <textarea name="<?php echo esc_attr(self::OPTION_KEY); ?>[blocked_urls]" rows="7" class="large-text code" placeholder="/shop/
-/product-category/
-/categorie/alle-producten/">
-                <?php echo esc_textarea($val); ?>
+            <textarea name="<?php echo esc_attr(self::OPTION_KEY); ?>[blocked_urls]" rows="7" class="large-text code" placeholder="/shop
+                /product-category/
+                /categorie/alle-producten/
+                "><?php echo esc_textarea($val); ?>
             </textarea>
             <p class="description">
                 <?php esc_html_e('One per line. Enter paths like "/shop" or "/product-category/shoes".', 'ds-wc-closure'); ?>
@@ -331,7 +331,7 @@ final class DS_Webshop_Closure {
         $wp_admin_bar->add_node([
             'id'    => 'ds-wc-closure-status',
             'title' => $html,
-            'href'  => admin_url('admin.php?page=ds-close-webshop'),
+            'href'  => admin_url('admin.php?page=ds-wc-closure'),
             'meta'  => ['title' => 'Webshop Closure'],
         ]);
     }

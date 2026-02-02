@@ -19,21 +19,21 @@ if (!function_exists('managepromo_is_enabled') || !managepromo_is_enabled('users
 
 class managepromo_User_Batch {
     const DUMMY_DOMAIN    = 'dummy.managepromo.com';
-    const META_PLAIN_PW   = 'kc_plain_password';
-    const NONCE_GEN       = 'kc_gen_nonce';
-    const NONCE_EXP       = 'kc_exp_nonce';
-    const META_IDENTIFIER = 'kc_identifier';
-    const META_WALLET     = 'kc_wallet_balance';
+    const META_PLAIN_PW   = 'ds_plain_password';
+    const NONCE_GEN       = 'ds_gen_nonce';
+    const NONCE_EXP       = 'ds_exp_nonce';
+    const META_IDENTIFIER = 'ds_identifier';
+    const META_WALLET     = 'ds_wallet_balance';
 
     /** Network Users: add "Identifier" column header */
     public function add_identifier_column_network( $cols ) {
-        $cols['kc_identifier'] = 'Identifier';
+        $cols['ds_identifier'] = 'Identifier';
         return $cols;
     }
 
     /** Network Users: render "Identifier" column cells */
     public function render_identifier_column_network( $val, $column_name, $user_id ) {
-        if ( $column_name !== 'kc_identifier' ) return $val;
+        if ( $column_name !== 'ds_identifier' ) return $val;
         $uid = is_object( $user_id ) && isset( $user_id->ID ) ? (int) $user_id->ID : (int) $user_id;
         $v   = get_user_meta( $uid, self::META_IDENTIFIER, true );
         return esc_html( (string) $v );
@@ -58,11 +58,11 @@ class managepromo_User_Batch {
         add_action( 'template_redirect',                      [ $this, 'wc_block_edit_account_endpoint' ] );
 
         // Single admin page under Users
-        add_action( 'admin_menu',                             [ $this, 'add_bulk_submenu' ] );
+        add_action( 'admin_menu',                             [ $this, 'add_adminpage' ] );
 
         // Bulk generate + Export POST handlers
-        add_action( 'admin_post_kc_bulk_generate',            [ $this, 'handle_bulk_generate' ] );
-        add_action( 'admin_post_kc_export_csv_site',          [ $this, 'handle_export_csv_site' ] );
+        add_action( 'admin_post_ds_bulk_generate',            [ $this, 'handle_bulk_generate' ] );
+        add_action( 'admin_post_ds_export_csv_site',          [ $this, 'handle_export_csv_site' ] );
 
         // Single-user create UI + save + validation
         add_action( 'user_new_form',                          [ $this, 'render_identifier_field' ] );
@@ -85,13 +85,13 @@ class managepromo_User_Batch {
         if ( $hook !== 'user-new.php' ) return;
 
         wp_enqueue_script(
-            'kc-user-gen',
+            'ds-user-gen',
             plugin_dir_url( __FILE__ ) . 'assets/user-gen.js',
             [ 'jquery' ],
             '1.0.1',
             true
         );
-        wp_localize_script( 'kc-user-gen', 'KCUserGen', [
+        wp_localize_script( 'ds-user-gen', 'DSUserGen', [
             'length'   => 10,
             'charset'  => $this->client_charset(), // A-Z,a-z,0-9 minus iIlLoO0
             'dummyDom' => self::DUMMY_DOMAIN,
@@ -106,9 +106,9 @@ class managepromo_User_Batch {
         <h3>Extra veld</h3>
         <table class="form-table">
             <tr>
-                <th><label for="kc_identifier">Identifier</label></th>
+                <th><label for="ds_identifier">Identifier</label></th>
                 <td>
-                    <input type="text" name="kc_identifier" id="kc_identifier" class="regular-text" required>
+                    <input type="text" name="ds_identifier" id="ds_identifier" class="regular-text" required>
                     <p class="description">Vereist tekstveld voor interne identificatie.</p>
                 </td>
             </tr>
@@ -118,26 +118,26 @@ class managepromo_User_Batch {
 
     public function validate_identifier_on_create( $errors, $update, $user ) {
         if ( $update ) return;
-        $idf = isset( $_POST['kc_identifier'] ) ? trim( (string) wp_unslash( $_POST['kc_identifier'] ) ) : '';
+        $idf = isset( $_POST['ds_identifier'] ) ? trim( (string) wp_unslash( $_POST['ds_identifier'] ) ) : '';
         if ( $idf === '' ) {
-            $errors->add( 'kc_identifier_required', __( 'Identifier is required.', 'default' ) );
+            $errors->add( 'ds_identifier_required', __( 'Identifier is required.', 'default' ) );
         }
     }
 
     public function save_identifier_on_create( $user_id ) {
         if ( ! self::is_subsite() ) return;
-        if ( isset( $_POST['kc_identifier'] ) ) {
-            update_user_meta( $user_id, self::META_IDENTIFIER, sanitize_text_field( wp_unslash( $_POST['kc_identifier'] ) ) );
+        if ( isset( $_POST['ds_identifier'] ) ) {
+            update_user_meta( $user_id, self::META_IDENTIFIER, sanitize_text_field( wp_unslash( $_POST['ds_identifier'] ) ) );
         }
     }
 
     public function add_identifier_column( $cols ) {
-        $cols['kc_identifier'] = 'Identifier';
+        $cols['ds_identifier'] = 'Identifier';
         return $cols;
     }
 
     public function render_identifier_column( $val, $column_name, $user_id ) {
-        if ( $column_name === 'kc_identifier' ) {
+        if ( $column_name === 'ds_identifier' ) {
             $v = get_user_meta( $user_id, self::META_IDENTIFIER, true );
             return esc_html( (string) $v );
         }
@@ -150,12 +150,12 @@ class managepromo_User_Batch {
         if ( ! $screen || ! in_array( $screen->id, [ 'users', 'users-network' ], true ) ) return;
         if ( $which === 'bottom' ) return;
 
-        $current = isset( $_GET['kc_identifier'] )
-            ? sanitize_text_field( (string) wp_unslash( $_GET['kc_identifier'] ) )
+        $current = isset( $_GET['ds_identifier'] )
+            ? sanitize_text_field( (string) wp_unslash( $_GET['ds_identifier'] ) )
             : '';
 
-        echo '<label class="screen-reader-text" for="kc_identifier">Identifier</label>';
-        echo '<input type="text" name="kc_identifier" id="kc_identifier" value="' . esc_attr( $current ) . '" placeholder="Filter Identifier" class="regular-text" style="margin-left:8px;" />';
+        echo '<label class="screen-reader-text" for="ds_identifier">Identifier</label>';
+        echo '<input type="text" name="ds_identifier" id="ds_identifier" value="' . esc_attr( $current ) . '" placeholder="Filter Identifier" class="regular-text" style="margin-left:8px;" />';
         submit_button( __( 'Filter' ), 'secondary', 'filter_action', false );
     }
 
@@ -167,7 +167,7 @@ class managepromo_User_Batch {
             if ( $screen && ! in_array( $screen->id, [ 'users', 'users-network' ], true ) ) return;
         }
 
-        $raw = isset( $_REQUEST['kc_identifier'] ) ? (string) wp_unslash( $_REQUEST['kc_identifier'] ) : '';
+        $raw = isset( $_REQUEST['ds_identifier'] ) ? (string) wp_unslash( $_REQUEST['ds_identifier'] ) : '';
         $idf = trim( sanitize_text_field( $raw ) );
         if ( $idf === '' ) return;
 
@@ -205,7 +205,7 @@ class managepromo_User_Batch {
             $query->set( 'include', $ids );
         }
 
-        $query->set( 'kc_identifier', $idf );
+        $query->set( 'ds_identifier', $idf );
         $query->set( 'cache_results', false );
         $query->set( 'update_user_meta_cache', false );
         $query->set( 'update_site_meta_cache', false );
@@ -242,12 +242,12 @@ class managepromo_User_Batch {
         $u = isset( $_POST['user_login'] ) ? sanitize_user( wp_unslash( $_POST['user_login'] ), true ) : '';
         $p = isset( $_POST['pass1'] ) ? (string) $_POST['pass1'] : '';
 
-        if ( $u === '' && isset( $_POST['kc_user_login'] ) ) {
-            $u = sanitize_user( wp_unslash( $_POST['kc_user_login'] ), true );
+        if ( $u === '' && isset( $_POST['ds_user_login'] ) ) {
+            $u = sanitize_user( wp_unslash( $_POST['ds_user_login'] ), true );
             $_POST['user_login'] = $u;
         }
-        if ( $p === '' && isset( $_POST['kc_pass1'] ) ) {
-            $p = (string) $_POST['kc_pass1'];
+        if ( $p === '' && isset( $_POST['ds_pass1'] ) ) {
+            $p = (string) $_POST['ds_pass1'];
             $_POST['pass1'] = $_POST['pass2'] = $p;
         }
 
@@ -294,25 +294,25 @@ class managepromo_User_Batch {
 
     /* --------------------- Admin page (Users &#8594; Bulk management) ------------- */
 
-    public function add_bulk_submenu() {
+    public function add_adminpage() {
         if ( ! self::is_subsite() ) return;
         add_users_page(
-            'Bulk management',
-            'Bulk management',
-            'create_users',
-            'kc-bulk-accounts',
+            'Bulk user management',
+            'Bulk user management',
+            'managepromo',
+            'bulk-user-management',
             [ $this, 'render_bulk_page' ]
         );
     }
 
     public function render_bulk_page() {
-        if ( ! current_user_can( 'create_users' ) ) { wp_die( 'Geen rechten.' ); }
+        if ( ! current_user_can( 'manage_options' ) ) { wp_die( 'Geen rechten.' ); }
 
         // Handle Import on the same page
         $report = null;
-        if ( isset( $_POST['kc_import_csv_site'] ) ) {
-            check_admin_referer( 'kc_bulk_import_site' );
-            $report = kc_import_update_users_from_csv(); // returns details
+        if ( isset( $_POST['ds_import_csv_site'] ) ) {
+            check_admin_referer( 'ds_bulk_import_site' );
+            $report = ds_import_update_users_from_csv(); // returns details
         }
 
         $roles = wp_roles()->get_names();
@@ -329,17 +329,17 @@ class managepromo_User_Batch {
 
                 <form style="margin:20px 0" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
                     <?php wp_nonce_field( self::NONCE_GEN ); ?>
-                    <input type="hidden" name="action" value="kc_bulk_generate">
+                    <input type="hidden" name="action" value="ds_bulk_generate">
 
                     <table>
                         <tr>
-                            <th style="width:150px; text-align:left"><label for="kc_qty">Aantal accounts</label></th>
-                            <td><input type="number" id="kc_qty" name="kc_qty" min="1" max="5000" value="50" required></td>
+                            <th style="width:150px; text-align:left"><label for="ds_qty">Aantal accounts</label></th>
+                            <td><input type="number" id="ds_qty" name="ds_qty" min="1" max="5000" value="50" required></td>
                         </tr>
                         <tr>
-                            <th style="width:150px; text-align:left"><label for="kc_role">Rol</label></th>
+                            <th style="width:150px; text-align:left"><label for="ds_role">Rol</label></th>
                             <td>
-                                <select id="kc_role" name="kc_role">
+                                <select id="ds_role" name="ds_role">
                                     <?php
                                     $default_role = function_exists( 'wc' ) ? 'customer' : get_option( 'default_role', 'subscriber' );
                                     foreach ( $roles as $role_key => $label ) {
@@ -355,8 +355,8 @@ class managepromo_User_Batch {
                             </td>
                         </tr>
                         <tr>
-                            <th style="width:150px; text-align:left"><label for="kc_identifiers">Identifier</label></th>
-                            <td><input type="text" id="kc_identifiers" name="kc_identifiers" placeholder="Bijv. BATCH-2025-LOCATIE1" required></td>
+                            <th style="width:150px; text-align:left"><label for="ds_identifiers">Identifier</label></th>
+                            <td><input type="text" id="ds_identifiers" name="ds_identifiers" placeholder="Bijv. BATCH-2025-LOCATIE1" required></td>
                         </tr>
                     </table>
 
@@ -369,14 +369,14 @@ class managepromo_User_Batch {
                 <p><small>Kolommen: username, password, role, site_id, user_id, identifier, created (incl. e-mail/naam en WooCommerce orderdetails indien aanwezig).</small></p>
 
                 <form style="margin:20px 0" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-                    <?php wp_nonce_field( 'kc_bulk_export_site' ); ?>
-                    <input type="hidden" name="action" value="kc_export_csv_site">
+                    <?php wp_nonce_field( 'ds_bulk_export_site' ); ?>
+                    <input type="hidden" name="action" value="ds_export_csv_site">
 
                     <table>
                         <tr>
                             <th style="width:150px; text-align:left"><label>Rol</label></th>
                             <td>
-                                <select name="kc_role">
+                                <select name="ds_role">
                                     <option value="__all">Alle rollen</option>
                                     <?php foreach ( $roles as $role_key => $label ) {
                                         printf( '<option value="%s">%s</option>', esc_attr( $role_key ), esc_html( $label ) );
@@ -395,8 +395,8 @@ class managepromo_User_Batch {
                 <p><small>Toegestane kolommen: <code>username</code> (verplicht). Alle overige velden (bijv. <code>password</code>, <code>user_email</code>, <code>first_name</code>, <code>last_name</code>, <code>role</code>, <code>wallet_balance</code>) zijn optioneel. Ontbrekende of ongeldige e-mailadressen krijgen automatisch een placeholder. Vult bestaande gebruikers bij; optioneel nieuwe aanmaken.</small></p>
 
                 <form style="margin:20px 0" method="post" enctype="multipart/form-data">
-                    <?php wp_nonce_field( 'kc_bulk_import_site' ); ?>
-                    <input type="file" name="kc_import_file" accept=".csv" required />
+                    <?php wp_nonce_field( 'ds_bulk_import_site' ); ?>
+                    <input type="file" name="ds_import_file" accept=".csv" required />
 
                     <?php
                     // Roles dropdown
@@ -408,8 +408,8 @@ class managepromo_User_Batch {
                     }
                     ?>
                     <div style="margin-top:12px;">
-                        <label for="kc_import_role_default"><strong>Standaard rol voor nieuwe/ge�pdatete gebruikers</strong></label><br>
-                        <select id="kc_import_role_default" name="kc_import_role_default" style="min-width:240px;">
+                        <label for="ds_import_role_default"><strong>Standaard rol voor nieuwe/ge�pdatete gebruikers</strong></label><br>
+                        <select id="ds_import_role_default" name="ds_import_role_default" style="min-width:240px;">
                             <?php foreach ( $roles as $role_key => $label ) : ?>
                                 <option value="<?php echo esc_attr( $role_key ); ?>" <?php selected( $role_key, $default_role ); ?>>
                                     <?php echo esc_html( $label ); ?>
@@ -424,16 +424,16 @@ class managepromo_User_Batch {
 
                     <p style="margin:8px 0;">
                         <label>
-                            <input type="checkbox" name="kc_import_update_role" value="1">
+                            <input type="checkbox" name="ds_import_update_role" value="1">
                             Update rol voor <em>bestaande</em> gebruikers (op deze site)
                         </label>
                     </p>
 
                     <p style="margin-top:8px;">
-                        <label><input type="checkbox" name="kc_create_missing" value="1"> Maak gebruiker aan als deze niet bestaat</label>
+                        <label><input type="checkbox" name="ds_create_missing" value="1"> Maak gebruiker aan als deze niet bestaat</label>
                     </p>
 
-                    <p><button class="button button-primary" name="kc_import_csv_site" value="1">Run Import</button></p>
+                    <p><button class="button button-primary" name="ds_import_csv_site" value="1">Run Import</button></p>
                 </form>
 
             </div>
@@ -481,8 +481,8 @@ class managepromo_User_Batch {
         if ( ! current_user_can( 'create_users' ) ) wp_die( 'Geen rechten.' );
         check_admin_referer( self::NONCE_GEN );
 
-        $qty  = max( 1, min( 5000, intval( $_POST['kc_qty'] ?? 0 ) ) );
-        $role = sanitize_key( $_POST['kc_role'] ?? '' );
+        $qty  = max( 1, min( 5000, intval( $_POST['ds_qty'] ?? 0 ) ) );
+        $role = sanitize_key( $_POST['ds_role'] ?? '' );
 
         if ( empty( $role ) ) {
             $role = function_exists( 'wc' ) ? 'customer' : get_option( 'default_role', 'subscriber' );
@@ -493,7 +493,7 @@ class managepromo_User_Batch {
             }
         }
 
-        $raw_ids     = isset( $_POST['kc_identifiers'] ) ? (string) wp_unslash( $_POST['kc_identifiers'] ) : '';
+        $raw_ids     = isset( $_POST['ds_identifiers'] ) ? (string) wp_unslash( $_POST['ds_identifiers'] ) : '';
         $identifiers = array_values( array_filter( array_map( 'trim', preg_split( '/\R+/', $raw_ids ) ), 'strlen' ) );
         $identifiers = array_map( 'sanitize_text_field', $identifiers );
 
@@ -573,11 +573,11 @@ class managepromo_User_Batch {
     }
 
     public function handle_export_csv_site() {
-        if ( ! current_user_can( 'list_users' ) ) wp_die( __( 'You do not have permission.', 'kc' ) );
-        check_admin_referer( 'kc_bulk_export_site' );
+        if ( ! current_user_can( 'list_users' ) ) wp_die( __( 'You do not have permission.', 'ds' ) );
+        check_admin_referer( 'ds_bulk_export_site' );
 
-        $role = sanitize_key( $_POST['kc_role'] ?? '__all' );
-        kc_export_for_blog( get_current_blog_id(), $role ); // streams & exits
+        $role = sanitize_key( $_POST['ds_role'] ?? '__all' );
+        ds_export_for_blog( get_current_blog_id(), $role ); // streams & exits
     }
 
     /* ------------------------------- Utils ---------------------------------- */
@@ -646,15 +646,15 @@ new managepromo_User_Batch();
 /* -----------------------------------------------------------------------------
  * Constants / helpers used outside the class
  * -------------------------------------------------------------------------- */
-if ( ! defined( 'KC_IDENTIFIER_META_KEY' ) ) {
-    define( 'KC_IDENTIFIER_META_KEY', 'kc_identifier' );
+if ( ! defined( 'ds_IDENTIFIER_META_KEY' ) ) {
+    define( 'ds_IDENTIFIER_META_KEY', 'ds_identifier' );
 }
 
 /* -----------------------------------------------------------------------------
  * Export helpers
  * -------------------------------------------------------------------------- */
 
-function kc_export_for_blog( $blog_id, $role = '__all' ) {
+function ds_export_for_blog( $blog_id, $role = '__all' ) {
     @set_time_limit( 0 );
 
     $filename = 'users_export_site-' . (int) $blog_id . '_' . date( 'Ymd_His' ) . '.csv';
@@ -663,17 +663,17 @@ function kc_export_for_blog( $blog_id, $role = '__all' ) {
     header( 'Content-Disposition: attachment; filename=' . $filename );
 
     $out = fopen( 'php://output', 'w' );
-    kc_write_csv_header( $out );
+    ds_write_csv_header( $out );
 
     switch_to_blog( $blog_id );
-    kc_stream_users_for_current_blog( $out, $blog_id, $role );
+    ds_stream_users_for_current_blog( $out, $blog_id, $role );
     restore_current_blog();
 
     fclose( $out );
     exit;
 }
 
-function kc_write_csv_header( $out ) {
+function ds_write_csv_header( $out ) {
     fputcsv( $out, [
         'username','password','role','site_id','user_id','identifier','created',
         'wallet_balance', // TeraWallet
@@ -685,12 +685,12 @@ function kc_write_csv_header( $out ) {
 }
 
 
-function kc_stream_users_for_current_blog( $out, $blog_id, $role = '__all' ) {
+function ds_stream_users_for_current_blog( $out, $blog_id, $role = '__all' ) {
     $has_wc = function_exists( 'wc_get_orders' );
 
     $pw_meta_key = ( class_exists( 'managepromo_User_Batch' ) )
         ? managepromo_User_Batch::META_PLAIN_PW
-        : 'kc_plain_password';
+        : 'ds_plain_password';
 
     $args = [
         'blog_id' => $blog_id,
@@ -706,16 +706,16 @@ function kc_stream_users_for_current_blog( $out, $blog_id, $role = '__all' ) {
     foreach ( $users as $u ) {
         $user_id    = (int) $u->ID;
         $username   = $u->user_login;
-        $identifier = get_user_meta( $user_id, KC_IDENTIFIER_META_KEY, true );
+        $identifier = get_user_meta( $user_id, ds_IDENTIFIER_META_KEY, true );
         $created    = $u->user_registered ?: '';
         $first_name = get_user_meta( $user_id, 'first_name', true );
         $last_name  = get_user_meta( $user_id, 'last_name', true );
-        $role_str   = kc_first_user_role_for_blog( $user_id, $blog_id );
+        $role_str   = ds_first_user_role_for_blog( $user_id, $blog_id );
 
         $plain_pw   = (string) get_user_meta( $user_id, $pw_meta_key, true );
 
         // Wallet balance (TeraWallet)
-        $wallet = kc_get_wallet_balance( $user_id ); // normalized "123.45" or ""
+        $wallet = ds_get_wallet_balance( $user_id ); // normalized "123.45" or ""
 
         $total_orders = 0;
         $orders       = [];
@@ -764,9 +764,9 @@ function kc_stream_users_for_current_blog( $out, $blog_id, $role = '__all' ) {
                 $order->get_billing_city(),
                 $order->get_billing_state(),
                 $order->get_billing_country(),
-                implode( ';', array_map( 'kc_sanitize_join_val', $skus ) ),
-                implode( ';', array_map( 'kc_sanitize_join_val', $names ) ),
-                implode( ';', array_map( 'kc_sanitize_join_val', $qtys ) ),
+                implode( ';', array_map( 'ds_sanitize_join_val', $skus ) ),
+                implode( ';', array_map( 'ds_sanitize_join_val', $names ) ),
+                implode( ';', array_map( 'ds_sanitize_join_val', $qtys ) ),
             ] );
         }
     }
@@ -777,41 +777,41 @@ function kc_stream_users_for_current_blog( $out, $blog_id, $role = '__all' ) {
  * Import (update by username; optional create)
  * -------------------------------------------------------------------------- */
 
-function kc_import_update_users_from_csv() {
+function ds_import_update_users_from_csv() {
     $report = [
         'rows'   => [],
         'totals' => [ 'updated' => 0, 'created' => 0, 'skipped' => 0, 'errors' => 0 ],
     ];
 
-    $create_if_missing     = ! empty( $_POST['kc_create_missing'] );
-    $update_role_existing  = ! empty( $_POST['kc_import_update_role'] );
+    $create_if_missing     = ! empty( $_POST['ds_create_missing'] );
+    $update_role_existing  = ! empty( $_POST['ds_import_update_role'] );
 
     // Roles map + keys
     $editable_roles_map = get_editable_roles();
     $editable_roles     = is_array( $editable_roles_map ) ? array_keys( $editable_roles_map ) : [];
 
     // Resolve default role from the form via the helper (accepts labels/aliases too)
-    $default_role_raw = sanitize_text_field( $_POST['kc_import_role_default'] ?? '' );
-    $default_role     = kc_resolve_role_key( $default_role_raw, $editable_roles_map );
+    $default_role_raw = sanitize_text_field( $_POST['ds_import_role_default'] ?? '' );
+    $default_role     = ds_resolve_role_key( $default_role_raw, $editable_roles_map );
     if ( $default_role === '' ) {
         $fallback     = function_exists( 'wc' ) ? 'customer' : get_option( 'default_role', 'subscriber' );
-        $default_role = kc_resolve_role_key( $fallback, $editable_roles_map );
+        $default_role = ds_resolve_role_key( $fallback, $editable_roles_map );
         if ( $default_role === '' ) $default_role = 'subscriber';
     }
 
     // --- File checks
-    if ( empty( $_FILES['kc_import_file']['tmp_name'] ) || ! is_uploaded_file( $_FILES['kc_import_file']['tmp_name'] ) ) {
-        $msg = __( 'No file uploaded or invalid upload.', 'kc' );
-        kc_admin_notice( $msg, 'error' );
-        kc_admin_notice_net( $msg, 'error' );
+    if ( empty( $_FILES['ds_import_file']['tmp_name'] ) || ! is_uploaded_file( $_FILES['ds_import_file']['tmp_name'] ) ) {
+        $msg = __( 'No file uploaded or invalid upload.', 'ds' );
+        ds_admin_notice( $msg, 'error' );
+        ds_admin_notice_net( $msg, 'error' );
         return $report;
     }
 
-    $fh = fopen( $_FILES['kc_import_file']['tmp_name'], 'r' );
+    $fh = fopen( $_FILES['ds_import_file']['tmp_name'], 'r' );
     if ( ! $fh ) {
-        $msg = __( 'Unable to open uploaded file.', 'kc' );
-        kc_admin_notice( $msg, 'error' );
-        kc_admin_notice_net( $msg, 'error' );
+        $msg = __( 'Unable to open uploaded file.', 'ds' );
+        ds_admin_notice( $msg, 'error' );
+        ds_admin_notice_net( $msg, 'error' );
         return $report;
     }
 
@@ -822,9 +822,9 @@ function kc_import_update_users_from_csv() {
     }
     if ( $firstLine === false ) {
         fclose($fh);
-        $msg = __( 'CSV appears empty.', 'kc' );
-        kc_admin_notice( $msg, 'error' );
-        kc_admin_notice_net( $msg, 'error' );
+        $msg = __( 'CSV appears empty.', 'ds' );
+        ds_admin_notice( $msg, 'error' );
+        ds_admin_notice_net( $msg, 'error' );
         return $report;
     }
     rewind($fh);
@@ -840,9 +840,9 @@ function kc_import_update_users_from_csv() {
     $header = fgetcsv( $fh, 0, $bestDelim );
     if ( ! $header || ! is_array( $header ) ) {
         fclose( $fh );
-        $msg = sprintf( __( 'CSV header not readable (delimiter: %s).', 'kc' ), $bestDelim === "\t" ? 'TAB' : $bestDelim );
-        kc_admin_notice( $msg, 'error' );
-        kc_admin_notice_net( $msg, 'error' );
+        $msg = sprintf( __( 'CSV header not readable (delimiter: %s).', 'ds' ), $bestDelim === "\t" ? 'TAB' : $bestDelim );
+        ds_admin_notice( $msg, 'error' );
+        ds_admin_notice_net( $msg, 'error' );
         return $report;
     }
 
@@ -878,9 +878,9 @@ function kc_import_update_users_from_csv() {
     $idx_username = $get_col( [ 'username', 'user_login', 'login', 'user' ] );
     if ( $idx_username === null ) {
         fclose( $fh );
-        $msg = __( 'Missing required column: username (aliases: user_login, login, user).', 'kc' );
-        kc_admin_notice( $msg, 'error' );
-        kc_admin_notice_net( $msg, 'error' );
+        $msg = __( 'Missing required column: username (aliases: user_login, login, user).', 'ds' );
+        ds_admin_notice( $msg, 'error' );
+        ds_admin_notice_net( $msg, 'error' );
         return $report;
     }
 
@@ -918,11 +918,11 @@ function kc_import_update_users_from_csv() {
         $role_raw = ( $idx_role   !== null ) ? (string)             ( $row[ $idx_role ]   ?? '' ) : '';
 
         // Resolve per-row role via helper; fallback to default
-        $role_key    = kc_resolve_role_key( $role_raw, $editable_roles_map );
+        $role_key    = ds_resolve_role_key( $role_raw, $editable_roles_map );
         $role_to_use = $role_key !== '' ? $role_key : $default_role;
 
         $wallet_in_raw = ( $idx_wallet !== null ) ? (string) ( $row[ $idx_wallet ] ?? '' ) : '';
-        $wallet_in     = kc_sanitize_amount( $wallet_in_raw );
+        $wallet_in     = ds_sanitize_amount( $wallet_in_raw );
 
         $existing = get_user_by( 'login', $username );
 
@@ -964,7 +964,7 @@ function kc_import_update_users_from_csv() {
 
             // Wallet target
             if ( $wallet_in !== '' ) {
-                kc_set_wallet_balance( $user_id, $wallet_in, sprintf( 'Import set balance to %s', $wallet_in ) );
+                ds_set_wallet_balance( $user_id, $wallet_in, sprintf( 'Import set balance to %s', $wallet_in ) );
             }
 
             // Optional note if role value fell back
@@ -1030,7 +1030,7 @@ function kc_import_update_users_from_csv() {
         if ( $last  !== '' ) update_user_meta( $new_id, 'last_name',  $last );
 
         if ( $wallet_in !== '' ) {
-            kc_set_wallet_balance( $new_id, $wallet_in, sprintf( 'Import set balance to %s', $wallet_in ) );
+            ds_set_wallet_balance( $new_id, $wallet_in, sprintf( 'Import set balance to %s', $wallet_in ) );
         }
 
         // Optional note if role value fell back
@@ -1049,8 +1049,8 @@ function kc_import_update_users_from_csv() {
         $report['totals']['skipped'],
         $report['totals']['errors']
     );
-    kc_admin_notice( $msg, $report['totals']['errors'] ? 'error' : 'success' );
-    kc_admin_notice_net( $msg, $report['totals']['errors'] ? 'error' : 'success' );
+    ds_admin_notice( $msg, $report['totals']['errors'] ? 'error' : 'success' );
+    ds_admin_notice_net( $msg, $report['totals']['errors'] ? 'error' : 'success' );
 
     return $report;
 }
@@ -1061,12 +1061,12 @@ function kc_import_update_users_from_csv() {
  * Misc helpers
  * -------------------------------------------------------------------------- */
 
-function kc_sanitize_join_val( $val ) {
+function ds_sanitize_join_val( $val ) {
     $val = (string) $val;
     $val = str_replace( [ ";\r\n", ";\n", ";\r", ";" ], "/", $val );
     return trim( $val );
 }
-function kc_sanitize_amount( $val ) {
+function ds_sanitize_amount( $val ) {
     if ( $val === null ) return '';
     $s = trim( (string) $val );
     if ( $s === '' ) return '';
@@ -1081,7 +1081,7 @@ function kc_sanitize_amount( $val ) {
 
     // fallback: pull last number out if needed, then normalize
     if ( ! is_numeric( $s ) ) {
-        $s = kc_extract_last_number( $s );
+        $s = ds_extract_last_number( $s );
     }
     if ( $s === '' || ! is_numeric( $s ) ) return '';
     return number_format( (float) $s, 2, '.', '' );
@@ -1089,14 +1089,14 @@ function kc_sanitize_amount( $val ) {
 
 
 
-function kc_first_user_role_for_blog( $user_id, $blog_id ) {
+function ds_first_user_role_for_blog( $user_id, $blog_id ) {
     $user = get_userdata( $user_id );
     if ( ! $user ) return '';
     $roles = (array) $user->roles;
     return $roles ? array_values( $roles )[0] : '';
 }
 
-function kc_admin_notice( $msg, $type = 'success' ) {
+function ds_admin_notice( $msg, $type = 'success' ) {
     if ( is_network_admin() ) return;
 
     $html = sprintf(
@@ -1116,7 +1116,7 @@ function kc_admin_notice( $msg, $type = 'success' ) {
     } );
 }
 
-function kc_admin_notice_net( $msg, $type = 'success' ) {
+function ds_admin_notice_net( $msg, $type = 'success' ) {
     if ( ! is_network_admin() ) return;
 
     $html = sprintf(
@@ -1139,7 +1139,7 @@ function kc_admin_notice_net( $msg, $type = 'success' ) {
 /**
  * Get current wallet balance using TeraWallet, with safe fallbacks.
  */
-function kc_get_wallet_balance( $user_id ) {
+function ds_get_wallet_balance( $user_id ) {
     $user_id = (int) $user_id;
 
     // Prefer TeraWallet API
@@ -1148,20 +1148,20 @@ function kc_get_wallet_balance( $user_id ) {
         if ( method_exists( $wallet, 'get_wallet_balance' ) ) {
             $raw = $wallet->get_wallet_balance( $user_id ); // may be formatted
             if ( is_numeric( $raw ) ) {
-                return kc_sanitize_amount( $raw );
+                return ds_sanitize_amount( $raw );
             }
-            $num = kc_extract_last_number( $raw );
-            return kc_sanitize_amount( $num );
+            $num = ds_extract_last_number( $raw );
+            return ds_sanitize_amount( $num );
         }
     }
 
     // Fallback: meta cache some versions keep
     $meta_bal = get_user_meta( $user_id, '_current_woo_wallet_balance', true );
     if ( is_numeric( $meta_bal ) ) {
-        return kc_sanitize_amount( $meta_bal );
+        return ds_sanitize_amount( $meta_bal );
     }
-    $num = kc_extract_last_number( $meta_bal );
-    return kc_sanitize_amount( $num );
+    $num = ds_extract_last_number( $meta_bal );
+    return ds_sanitize_amount( $num );
 }
 
 
@@ -1169,10 +1169,10 @@ function kc_get_wallet_balance( $user_id ) {
  * Set wallet balance by creating a credit/debit transaction via TeraWallet.
  * If TeraWallet not available, last-resort fallback updates meta (not recommended).
  */
-function kc_set_wallet_balance( $user_id, $target_amount, $note = 'Bulk import adjustment' ) {
+function ds_set_wallet_balance( $user_id, $target_amount, $note = 'Bulk import adjustment' ) {
     $user_id = (int) $user_id;
-    $target  = (float) kc_sanitize_amount( $target_amount );
-    $current = (float) kc_get_wallet_balance( $user_id );
+    $target  = (float) ds_sanitize_amount( $target_amount );
+    $current = (float) ds_get_wallet_balance( $user_id );
     $delta   = round( $target - $current, 2 );
 
     if ( abs( $delta ) < 0.01 ) {
@@ -1210,7 +1210,7 @@ function kc_set_wallet_balance( $user_id, $target_amount, $note = 'Bulk import a
  * Extract the last numeric token (e.g., "10" from "&#127873; 10", or "1,234.50" from "&#8377; 1,234.50").
  * Returns '' if not found.
  */
-function kc_extract_last_number( $s ) {
+function ds_extract_last_number( $s ) {
     if ( $s === null ) return '';
     $s = (string) $s;
     $s = wp_strip_all_tags( $s );
@@ -1240,7 +1240,7 @@ function kc_extract_last_number( $s ) {
  * Accepts labels ("Shop Manager"), aliases ("admin"), hyphens/spaces, and some nl_NL terms.
  * Returns role key (e.g. 'shop_manager') or '' if no match.
  */
-function kc_resolve_role_key( $input, array $editable_roles_map ) {
+function ds_resolve_role_key( $input, array $editable_roles_map ) {
     $in = trim( (string) $input );
     if ( $in === '' ) return '';
 

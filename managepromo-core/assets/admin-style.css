@@ -1,15 +1,18 @@
-.kc-toggle {
+.ds-optionstable {margin-top: 40px}
+.ds-optionstable h3 {margin: 10px 0}
+
+.ds-toggle {
   position: relative;
   display: inline-block;
   width: 52px;
   height: 26px;
 }
-.kc-toggle input {
+.ds-toggle input {
   opacity: 0;
   width: 0;
   height: 0;
 }
-.kc-slider {
+.ds-slider {
   position: absolute;
   cursor: pointer;
   top: 0;
@@ -20,7 +23,7 @@
   transition: .4s;
   border-radius: 26px;
 }
-.kc-slider:before {
+.ds-slider:before {
   position: absolute;
   content: "";
   height: 20px;
@@ -31,9 +34,9 @@
   transition: .4s;
   border-radius: 50%;
 }
-.kc-toggle input:checked + .kc-slider {
+.ds-toggle input:checked + .ds-slider {
   background-color: #2271b1;
 }
-.kc-toggle input:checked + .kc-slider:before {
+.ds-toggle input:checked + .ds-slider:before {
   transform: translateX(26px);
 }

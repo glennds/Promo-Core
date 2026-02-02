@@ -38,20 +38,18 @@ function kc_render_price_filters_admin( $post_type ) {
     $regular_min  = $get('regular_price_min');
     $regular_max  = $get('regular_price_max');
     ?>
-    <div class="alignleft actions">
+    <br>
+    <style>#ds-pricefilters input, #ds-pricefilters label {width: 80px; margin-left: 6px}</style>
+    <div id="ds-pricefilters" class="alignleft actions" style="margin: 6px 0">
         <!-- Supplier Min/Max -->
-        <label style="margin-right:6px;"><strong><?php esc_html_e('Supplier', 'your-textdomain'); ?></strong></label>
-        <input type="number" step="0.01" name="supplier_price_min" placeholder="<?php esc_attr_e('Min', 'your-textdomain'); ?>"
-               value="<?php echo $supplier_min; ?>" style="width:110px; margin-right:5px;" />
-        <input type="number" step="0.01" name="supplier_price_max" placeholder="<?php esc_attr_e('Max', 'your-textdomain'); ?>"
-               value="<?php echo $supplier_max; ?>" style="width:110px; margin-right:15px;" />
+        <label><strong>Kostprijs</strong></label>
+        <input type="number" step="1.00" name="supplier_price_min" placeholder="Min"/>
+        <input type="number" step="1.00" name="supplier_price_max" placeholder="Max"/>
 
         <!-- Regular Min/Max -->
-        <label style="margin-right:6px;"><strong><?php esc_html_e('Regular', 'your-textdomain'); ?></strong></label>
-        <input type="number" step="0.01" name="regular_price_min" placeholder="<?php esc_attr_e('Min', 'your-textdomain'); ?>"
-               value="<?php echo $regular_min; ?>" style="width:110px; margin-right:5px;" />
-        <input type="number" step="0.01" name="regular_price_max" placeholder="<?php esc_attr_e('Max', 'your-textdomain'); ?>"
-               value="<?php echo $regular_max; ?>" style="width:110px;" />
+        <label style="margin-left: 20px;"><strong>Verkoopprijs</strong></label>
+        <input type="number" step="1.00" name="regular_price_min" placeholder="Min"/>
+        <input type="number" step="1.00" name="regular_price_max" placeholder="Max"/>
     </div>
     <?php
 }
