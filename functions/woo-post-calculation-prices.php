@@ -25,11 +25,6 @@ add_action('woocommerce_admin_process_product_object', function ($product) {
 
 
 
-// Add function to conditionally hide price fields here
-// function()
-
-
-
 // Check if checkbox is enabled
 function ds_is_post_calculation_price($product): bool {
     // Normalize product id for variations
@@ -56,6 +51,62 @@ add_filter('woocommerce_product_get_sale_price', 'ds_postcalc_zero_price', 9999,
 add_filter('woocommerce_product_variation_get_price', 'ds_postcalc_zero_price', 9999, 2);
 add_filter('woocommerce_product_variation_get_regular_price', 'ds_postcalc_zero_price', 9999, 2);
 add_filter('woocommerce_product_variation_get_sale_price', 'ds_postcalc_zero_price', 9999, 2);
+
+// Set price fields to 0 if checkbox is enabled.
+add_action('woocommerce_admin_process_product_object', function ($product) {
+    // Always persist the checkbox state
+    $product->update_meta_data('_post_calculation_price', !empty($_POST['_post_calculation_price']) ? 'yes' : 'no');
+
+    if (empty($_POST['_post_calculation_price'])) {return;}
+
+    // Explicitly force all price-related values to 0
+    $product->set_regular_price('0');
+    $product->set_sale_price('0');
+    $product->set_price('0');
+
+    // Also force raw meta to 0 for consistency (exports, direct meta reads, stats)
+    $product->update_meta_data('_regular_price', '0');
+    $product->update_meta_data('_sale_price', '0');
+    $product->update_meta_data('_price', '0');
+});
+
+add_action('admin_footer-post.php', 'ds_postcalc_disable_price_inputs_live');
+add_action('admin_footer-post-new.php', 'ds_postcalc_disable_price_inputs_live');
+
+add_action('admin_footer-post.php', 'ds_postcalc_disable_price_inputs_live');
+add_action('admin_footer-post-new.php', 'ds_postcalc_disable_price_inputs_live');
+
+// Disable price fields when checkbox gets ticked
+function ds_postcalc_disable_price_inputs_live(): void {
+    $screen = function_exists('get_current_screen') ? get_current_screen() : null;
+    if (!$screen || $screen->post_type !== 'product') return;
+    ?>
+    <script>
+    (function () {
+        // Enable/disable price inputs based on the post-calculation checkbox
+        function togglePriceInputs() {
+            var cb = document.getElementById('_post_calculation_price');
+            if (!cb) return;
+
+            var disabled = cb.checked;
+            var regular  = document.getElementById('_regular_price');
+            var sale     = document.getElementById('_sale_price');
+
+            if (regular) regular.disabled = disabled;
+            if (sale)    sale.disabled    = disabled;
+        }
+
+        // Initial state + live updates
+        document.addEventListener('DOMContentLoaded', togglePriceInputs);
+        document.addEventListener('change', function (e) {
+            if (e.target && e.target.id === '_post_calculation_price') {
+                togglePriceInputs();
+            }
+        });
+    })();
+    </script>
+    <?php
+}
 
 
 
