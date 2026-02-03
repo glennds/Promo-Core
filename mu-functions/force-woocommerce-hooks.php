@@ -18,24 +18,14 @@ function ds_run_wc_activation_on_cloned_site($process_or_site_id){
 
     switch_to_blog($target_id);
 
-    // Only if WooCommerce is available on this site
-    if (class_exists('WC_Install')) {
-        //// Option A: Only activate roles and capabilities
-        // WC_Install::create_roles();
-        // WC_Install::add_capabilities();
-
-        // Option B: Full activation routine (creates options, schedules, etc.)
-        WC_Install::install();
+    if (class_exists('WC_Install')) {           // Only if WooCommerce is available on this site
+        WC_Install::install();                  // Full activation routine (creates options, schedules, etc.)
 
         // Refresh role cache for this blog
-        if (function_exists('wp_roles')) {
-            wp_roles()->for_site($target_id);
-        }
+        if (function_exists('wp_roles')) {wp_roles()->for_site($target_id);}
 
         // Clear object cache so the fresh wp_user_roles is used
-        if (function_exists('wp_cache_flush')) {
-            wp_cache_flush();
-        }
+        if (function_exists('wp_cache_flush')) {wp_cache_flush();}
     }
 
     restore_current_blog();

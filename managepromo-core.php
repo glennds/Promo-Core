@@ -3,7 +3,7 @@
  * Plugin Name: ManagePromo Core
  * Plugin URI: https://www.digishock.com/webdevelopment/
  * Description: Diverse functionaliteiten op maat gemaakt voor Promotie.nl — Gebruik de ingebouwde instellingenpagina's om de functies te beheren.
- * Version: beta-1.2.0
+ * Version: beta-1.2.1
  * Requires at least: 6.8.2
  * Requires PHP: 8.2
  * Author: Digishock
