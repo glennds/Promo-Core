@@ -3,30 +3,54 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Add delimiter field to WooCommerce product export form.
-add_filter('woocommerce_product_exporter_formatting_callbacks', function ($callbacks) {return $callbacks;});
-
-// Add custom field to the product export form.
-add_action('woocommerce_product_exporter_additional_fields', function () {
+/**
+ * Inject "Scheidingsteken" field into WooCommerce Product Export form.
+ * Uses the native WooCommerce key: "delimiter".
+ */
+add_action('admin_footer', function () {
+    // Only on WooCommerce product exporter page
+    if (
+        empty($_GET['post_type']) || $_GET['post_type'] !== 'product' ||
+        empty($_GET['page']) || $_GET['page'] !== 'product_exporter'
+    ) {
+        return;
+    }
     ?>
-    <tr>
-        <th scope="row"><label for="ds_export_delimiter">Scheidingsteken</label></th>
-        <td>
-            <input type="text" id="ds_export_delimiter" name="ds_export_delimiter" value=";" placeholder=";" class="regular-text" maxlength="1"/>
-            <p class="description">Scheidingsteken voor het CSV-bestand (bijv. ; of ,)</p>
-        </td>
-    </tr>
+    <script>
+    (function () {
+        var form = document.querySelector('form.woocommerce-exporter');
+        if (!form) return;
+        if (document.getElementById('delimiter')) return; // Prevent double insert
+        var tbody = form.querySelector('table.form-table tbody');
+        if (!tbody) return;
+
+        var tr = document.createElement('tr');
+        tr.innerHTML =
+            '<th scope="row">' +
+                '<label for="delimiter">Scheidingsteken</label>' +
+            '</th>' +
+            '<td>' +
+                '<input type="text" id="delimiter" name="delimiter" placeholder=";" class="regular-text" maxlength="1" />' +
+            '</td>';
+
+        tbody.insertBefore(tr, tbody.firstChild); // Insert at top of the form
+
+        // Default value if empty
+        var input = tr.querySelector('#delimiter');
+        if (input && !input.value) {input.value = ';';}
+    })();
+    </script>
     <?php
 });
 
-// Use the chosen delimiter for the export.
-add_filter('woocommerce_csv_export_delimiter', function ($delimiter) {
-    if (!empty($_REQUEST['ds_export_delimiter'])) {
-        $custom = trim((string) $_REQUEST['ds_export_delimiter']);
-        if ($custom !== '') {
-            return $custom[0];
-        }
-    }
+add_filter('woocommerce_product_export_delimiter', function ($delimiter) {
+    // Read from request (GET or POST) --- DOESNT WORK
+    // if (isset($_REQUEST['delimiter'])) {
+    //     $raw = trim((string) wp_unslash($_REQUEST['delimiter']));
+    //     if ($raw !== '') {
+    //         return $raw[0]; // always use first character
+    //     }
+    // }
 
     return ';'; // Default fallback
 });
