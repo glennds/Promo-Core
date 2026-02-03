@@ -3,7 +3,7 @@
  * Plugin Name: ManagePromo Core
  * Plugin URI: https://www.digishock.com/webdevelopment/
  * Description: Diverse functionaliteiten op maat gemaakt voor Promotie.nl — Gebruik de ingebouwde instellingenpagina's om de functies te beheren.
- * Version: beta-1.2.1
+ * Version: beta-1.3.0
  * Requires at least: 6.8.2
  * Requires PHP: 8.2
  * Author: Digishock
@@ -22,19 +22,20 @@ require_once plugin_dir_path(__FILE__) . 'mu-functions/choose-woocommerce-export
 require_once plugin_dir_path(__FILE__) . 'mu-functions/cleanup-breakdance.php';
 
 // Load optional functions
-if (managepromo_is_enabled('site_logo'))                                   {require_once plugin_dir_path(__FILE__) . 'functions/add-sitelogo-setting.php';}
-if (managepromo_is_enabled('woo_change_neworder_email'))                   {require_once plugin_dir_path(__FILE__) . 'functions/woo-change-admin-neworder-email.php';}
-if (managepromo_is_enabled('woo_pricing_filters'))                         {require_once plugin_dir_path(__FILE__) . 'functions/woo-pricing-filters.php';}
-if (managepromo_is_enabled('woo_webshop_closure'))                         {require_once plugin_dir_path(__FILE__) . 'functions/woo-webshop-closure.php';}
-if (managepromo_is_enabled('woo_min_order_amount'))                        {require_once plugin_dir_path(__FILE__) . 'functions/woo-min-order-amount.php';}
-if (managepromo_is_enabled('woo_post_calculation_prices'))                 {require_once plugin_dir_path(__FILE__) . 'functions/woo-post-calculation-prices.php';}
-if (managepromo_is_enabled('users_redirect_guests_to_login'))              {require_once plugin_dir_path(__FILE__) . 'functions/users-redirect-guests-to-login.php';}
-if (managepromo_is_enabled('users_restrict_login_to_subsite'))             {require_once plugin_dir_path(__FILE__) . 'functions/users-restrict-login-to-subsite.php';}
-if (managepromo_is_enabled('users_disable_email_field'))                   {require_once plugin_dir_path(__FILE__) . 'functions/users-disable-email-field.php';}
-if (managepromo_is_enabled('users_disable_email_bulkgen_exportimport'))    {require_once plugin_dir_path(__FILE__) . 'functions/users-disable-email-bulkgen-exportimport.php';}
-if (managepromo_is_enabled('users_mainsite_redirect'))                     {require_once plugin_dir_path(__FILE__) . 'functions/users-mainsite-redirect.php';}
-if (managepromo_is_enabled('disable_gutenberg'))                           {require_once plugin_dir_path(__FILE__) . 'functions/disable-gutenberg.php';}
-if (managepromo_is_enabled('woo_disable_downloads'))                       {require_once plugin_dir_path(__FILE__) . 'functions/woo-disable-downloads.php';}
+if (managepromo_is_enabled('site_logo'))                                    {require_once plugin_dir_path(__FILE__) . 'functions/add-sitelogo-setting.php';}
+if (managepromo_is_enabled('woo_change_neworder_email'))                    {require_once plugin_dir_path(__FILE__) . 'functions/woo-change-admin-neworder-email.php';}
+if (managepromo_is_enabled('woo_pricing_filters'))                          {require_once plugin_dir_path(__FILE__) . 'functions/woo-pricing-filters.php';}
+if (managepromo_is_enabled('woo_webshop_closure'))                          {require_once plugin_dir_path(__FILE__) . 'functions/woo-webshop-closure.php';}
+if (managepromo_is_enabled('woo_min_order_amount'))                         {require_once plugin_dir_path(__FILE__) . 'functions/woo-min-order-amount.php';}
+if (managepromo_is_enabled('woo_post_calculation_prices'))                  {require_once plugin_dir_path(__FILE__) . 'functions/woo-post-calculation-prices.php';}
+if (managepromo_is_enabled('woo_originalprice_columns'))                    {require_once plugin_dir_path(__FILE__) . 'functions/woo-originalprice-columns.php';}
+if (managepromo_is_enabled('users_redirect_guests_to_login'))               {require_once plugin_dir_path(__FILE__) . 'functions/users-redirect-guests-to-login.php';}
+if (managepromo_is_enabled('users_restrict_login_to_subsite'))              {require_once plugin_dir_path(__FILE__) . 'functions/users-restrict-login-to-subsite.php';}
+if (managepromo_is_enabled('users_disable_email_field'))                    {require_once plugin_dir_path(__FILE__) . 'functions/users-disable-email-field.php';}
+if (managepromo_is_enabled('users_disable_email_bulkgen_exportimport'))     {require_once plugin_dir_path(__FILE__) . 'functions/users-disable-email-bulkgen-exportimport.php';}
+if (managepromo_is_enabled('users_mainsite_redirect'))                      {require_once plugin_dir_path(__FILE__) . 'functions/users-mainsite-redirect.php';}
+if (managepromo_is_enabled('disable_gutenberg'))                            {require_once plugin_dir_path(__FILE__) . 'functions/disable-gutenberg.php';}
+if (managepromo_is_enabled('woo_disable_downloads'))                        {require_once plugin_dir_path(__FILE__) . 'functions/woo-disable-downloads.php';}
 
 
 // Load assets for functions
@@ -62,19 +63,20 @@ add_action('admin_init', function() {
 
 function managepromo_sanitize_toggle_options($input) {
     $defaults = [
-        'site_logo' => 0,
-        'woo_change_neworder_email' => 0,
-        'woo_pricing_filters' => 0,
-        'woo_webshop_closure' => 0,
-        'woo_min_order_amount' => 0,
-        'woo_post_calculation_prices' => 0,
-        'users_redirect_guests_to_login' => 0,
-        'users_restrict_login_to_subsite' => 0,
-        'users_disable_email_field' => 0,
-        'users_disable_email_bulkgen_exportimport' => 0,
-        'users_mainsite_redirect' => 0,
-        'disable_gutenberg' => 0,
-        'woo_disable_downloads' => 0
+        'site_logo'                                 => 0,
+        'woo_change_neworder_email'                 => 0,
+        'woo_pricing_filters'                       => 0,
+        'woo_webshop_closure'                       => 0,
+        'woo_min_order_amount'                      => 0,
+        'woo_post_calculation_prices'               => 0,
+        'woo_originalprice_columns'                 => 0,
+        'users_redirect_guests_to_login'            => 0,
+        'users_restrict_login_to_subsite'           => 0,
+        'users_disable_email_field'                 => 0,
+        'users_disable_email_bulkgen_exportimport'  => 0,
+        'users_mainsite_redirect'                   => 0,
+        'disable_gutenberg'                         => 0,
+        'woo_disable_downloads'                     => 0
     ];
 
     if (!is_array($input)) {$input = [];}                           // Prevent null if function is toggled off    
@@ -124,19 +126,20 @@ function managepromo_features() {
     }
 
     $options = get_option('ds_functiontoggles', [
-        'site_logo' => 0,
-        'woo_change_neworder_email' => 0,
-        'woo_pricing_filters' => 0,
-        'woo_webshop_closure' => 0,
-        'woo_min_order_amount' => 0,
-        'woo_post_calculation_prices' => 0,
-        'users_redirect_guests_to_login' => 0,
-        'users_restrict_login_to_subsite' => 0,
-        'users_disable_email_field' => 0,
-        'users_disable_email_bulkgen_exportimport' => 0,
-        'users_mainsite_redirect' => 0,
-        'disable_gutenberg' => 0,
-        'woo_disable_downloads' => 0
+        'site_logo'                                 => 0,
+        'woo_change_neworder_email'                 => 0,
+        'woo_pricing_filters'                       => 0,
+        'woo_webshop_closure'                       => 0,
+        'woo_min_order_amount'                      => 0,
+        'woo_post_calculation_prices'               => 0,
+        'woo_originalprice_columns'                 => 0,
+        'users_redirect_guests_to_login'            => 0,
+        'users_restrict_login_to_subsite'           => 0,
+        'users_disable_email_field'                 => 0,
+        'users_disable_email_bulkgen_exportimport'  => 0,
+        'users_mainsite_redirect'                   => 0,
+        'disable_gutenberg'                         => 0,
+        'woo_disable_downloads'                     => 0
     ]);
     ?>
     <div class="wrap">
@@ -220,6 +223,16 @@ function managepromo_features() {
                             <input type="hidden" name="ds_functiontoggles[woo_post_calculation_prices]" value="0">
                             <label class="ds-toggle">
                                 <input type="checkbox" name="ds_functiontoggles[woo_post_calculation_prices]" value="1" <?php checked((int) ($options['woo_post_calculation_prices'] ?? 0), 1); ?>>
+                                <span class="ds-slider"></span>
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600">Voeg een 'Originele Prijs' kolom toe aan cart, checkout, thankyou & email</td>
+                        <td>
+                            <input type="hidden" name="ds_functiontoggles[woo_originalprice_columns]" value="0">
+                            <label class="ds-toggle">
+                                <input type="checkbox" name="ds_functiontoggles[woo_originalprice_columns]" value="1" <?php checked((int) ($options['woo_originalprice_columns'] ?? 0), 1); ?>>
                                 <span class="ds-slider"></span>
                             </label>
                         </td>
