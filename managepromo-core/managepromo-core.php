@@ -28,6 +28,7 @@ if (managepromo_is_enabled('woo_pricing_filters'))                          {req
 if (managepromo_is_enabled('woo_webshop_closure'))                          {require_once plugin_dir_path(__FILE__) . 'functions/woo-webshop-closure.php';}
 if (managepromo_is_enabled('woo_min_order_amount'))                         {require_once plugin_dir_path(__FILE__) . 'functions/woo-min-order-amount.php';}
 if (managepromo_is_enabled('woo_post_calculation_prices'))                  {require_once plugin_dir_path(__FILE__) . 'functions/woo-post-calculation-prices.php';}
+if (mpc_qty_step_is_enabled())                                              {require_once plugin_dir_path(__FILE__) . 'functions/woo-quantity-step.php';}
 if (managepromo_is_enabled('woo_originalprice_columns'))                    {require_once plugin_dir_path(__FILE__) . 'functions/woo-originalprice-columns.php';}
 if (managepromo_is_enabled('users_redirect_guests_to_login'))               {require_once plugin_dir_path(__FILE__) . 'functions/users-redirect-guests-to-login.php';}
 if (managepromo_is_enabled('users_restrict_login_to_subsite'))              {require_once plugin_dir_path(__FILE__) . 'functions/users-restrict-login-to-subsite.php';}
@@ -58,6 +59,12 @@ add_action('admin_init', function() {
     register_setting('managepromo_settings', 'ds_functiontoggles', [
     'type' => 'array',
     'sanitize_callback' => 'managepromo_sanitize_toggle_options'
+    ]);
+
+    register_setting('managepromo_settings', 'mpc_enable_qty_step', [
+    'type' => 'integer',
+    'sanitize_callback' => 'absint',
+    'default' => 1
     ]);
 });
 
@@ -141,6 +148,8 @@ function managepromo_features() {
         'disable_gutenberg'                         => 0,
         'woo_disable_downloads'                     => 0
     ]);
+
+    $qty_step_enabled = (int) get_option('mpc_enable_qty_step', 1);
     ?>
     <div class="wrap">
         <h1>ManagePromo Functies</h1>
@@ -320,6 +329,16 @@ function managepromo_features() {
                         </td>
                     </tr>
                     <tr>
+                        <td style="font-weight: 600">Enable Quantity Step</td>
+                        <td>
+                            <input type="hidden" name="mpc_enable_qty_step" value="0">
+                            <label class="ds-toggle">
+                                <input type="checkbox" name="mpc_enable_qty_step" value="1" <?php checked((int) $qty_step_enabled, 1); ?>>
+                                <span class="ds-slider"></span>
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
                         <td style="font-weight: 600">Downloadbare producten uitschakelen</td>
                         <td>
                             <input type="hidden" name="ds_functiontoggles[woo_disable_downloads]" value="0">
@@ -376,4 +395,8 @@ add_action('admin_enqueue_scripts', function ($hook) {
 function managepromo_is_enabled($key) {
     $options = get_option('ds_functiontoggles', []);
     return isset($options[$key]) && $options[$key] === 1;
+}
+
+function mpc_qty_step_is_enabled() {
+    return (int) get_option('mpc_enable_qty_step', 1) === 1;
 }
