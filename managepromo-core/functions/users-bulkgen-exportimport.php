@@ -1,6 +1,6 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) {exit;}
-if (!function_exists('managepromo_is_enabled') || !managepromo_is_enabled('users_disable_email_bulkgen_exportimport')) {return;}
+if (!function_exists('managepromo_is_enabled') || !managepromo_is_enabled('users_bulkgen_exportimport')) {return;}
 
 //////////////////////////////////
 // Function contents start HERE //

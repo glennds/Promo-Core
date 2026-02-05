@@ -29,11 +29,10 @@ if (managepromo_is_enabled('woo_webshop_closure'))                          {req
 if (managepromo_is_enabled('woo_min_order_amount'))                         {require_once plugin_dir_path(__FILE__) . 'functions/woo-min-order-amount.php';}
 if (managepromo_is_enabled('woo_post_calculation_prices'))                  {require_once plugin_dir_path(__FILE__) . 'functions/woo-post-calculation-prices.php';}
 if (mpc_qty_step_is_enabled())                                              {require_once plugin_dir_path(__FILE__) . 'functions/woo-quantity-step.php';}
-if (managepromo_is_enabled('woo_originalprice_columns'))                    {require_once plugin_dir_path(__FILE__) . 'functions/woo-originalprice-columns.php';}
 if (managepromo_is_enabled('users_redirect_guests_to_login'))               {require_once plugin_dir_path(__FILE__) . 'functions/users-redirect-guests-to-login.php';}
 if (managepromo_is_enabled('users_restrict_login_to_subsite'))              {require_once plugin_dir_path(__FILE__) . 'functions/users-restrict-login-to-subsite.php';}
 if (managepromo_is_enabled('users_disable_email_field'))                    {require_once plugin_dir_path(__FILE__) . 'functions/users-disable-email-field.php';}
-if (managepromo_is_enabled('users_disable_email_bulkgen_exportimport'))     {require_once plugin_dir_path(__FILE__) . 'functions/users-disable-email-bulkgen-exportimport.php';}
+if (managepromo_is_enabled('users_bulkgen_exportimport'))                   {require_once plugin_dir_path(__FILE__) . 'functions/users-bulkgen-exportimport.php';}
 if (managepromo_is_enabled('users_mainsite_redirect'))                      {require_once plugin_dir_path(__FILE__) . 'functions/users-mainsite-redirect.php';}
 if (managepromo_is_enabled('disable_gutenberg'))                            {require_once plugin_dir_path(__FILE__) . 'functions/disable-gutenberg.php';}
 if (managepromo_is_enabled('woo_disable_downloads'))                        {require_once plugin_dir_path(__FILE__) . 'functions/woo-disable-downloads.php';}
@@ -76,11 +75,10 @@ function managepromo_sanitize_toggle_options($input) {
         'woo_webshop_closure'                       => 0,
         'woo_min_order_amount'                      => 0,
         'woo_post_calculation_prices'               => 0,
-        'woo_originalprice_columns'                 => 0,
         'users_redirect_guests_to_login'            => 0,
         'users_restrict_login_to_subsite'           => 0,
         'users_disable_email_field'                 => 0,
-        'users_disable_email_bulkgen_exportimport'  => 0,
+        'users_bulkgen_exportimport'                => 0,
         'users_mainsite_redirect'                   => 0,
         'disable_gutenberg'                         => 0,
         'woo_disable_downloads'                     => 0
@@ -139,11 +137,10 @@ function managepromo_features() {
         'woo_webshop_closure'                       => 0,
         'woo_min_order_amount'                      => 0,
         'woo_post_calculation_prices'               => 0,
-        'woo_originalprice_columns'                 => 0,
         'users_redirect_guests_to_login'            => 0,
         'users_restrict_login_to_subsite'           => 0,
         'users_disable_email_field'                 => 0,
-        'users_disable_email_bulkgen_exportimport'  => 0,
+        'users_bulkgen_exportimport'                => 0,
         'users_mainsite_redirect'                   => 0,
         'disable_gutenberg'                         => 0,
         'woo_disable_downloads'                     => 0
@@ -236,16 +233,6 @@ function managepromo_features() {
                             </label>
                         </td>
                     </tr>
-                    <tr>
-                        <td style="font-weight: 600">Voeg een 'Originele Prijs' kolom toe aan cart, checkout, thankyou & email</td>
-                        <td>
-                            <input type="hidden" name="ds_functiontoggles[woo_originalprice_columns]" value="0">
-                            <label class="ds-toggle">
-                                <input type="checkbox" name="ds_functiontoggles[woo_originalprice_columns]" value="1" <?php checked((int) ($options['woo_originalprice_columns'] ?? 0), 1); ?>>
-                                <span class="ds-slider"></span>
-                            </label>
-                        </td>
-                    </tr>
                 </tbody>
             </table>
 
@@ -290,9 +277,9 @@ function managepromo_features() {
                     <tr>
                         <td style="font-weight: 600">Accountbeheer wijzigingen, bulk accountgeneratie en import/export van gebruikers/orders/klantdata.</td>
                         <td>
-                            <input type="hidden" name="ds_functiontoggles[users_disable_email_bulkgen_exportimport]" value="0">
+                            <input type="hidden" name="ds_functiontoggles[users_bulkgen_exportimport]" value="0">
                             <label class="ds-toggle">
-                                <input type="checkbox" name="ds_functiontoggles[users_disable_email_bulkgen_exportimport]" value="1" <?php checked((int) ($options['users_disable_email_bulkgen_exportimport'] ?? 0), 1); ?>>
+                                <input type="checkbox" name="ds_functiontoggles[users_bulkgen_exportimport]" value="1" <?php checked((int) ($options['users_bulkgen_exportimport'] ?? 0), 1); ?>>
                                 <span class="ds-slider"></span>
                             </label>
                         </td>
