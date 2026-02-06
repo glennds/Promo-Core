@@ -40,3 +40,10 @@
 .ds-toggle input:checked + .ds-slider:before {
   transform: translateX(26px);
 }
+.ds-toggle input:checked:disabled + .ds-slider {
+  background-color: #8ecae6;
+  cursor: not-allowed;
+}
+.ds-toggle input:checked:disabled + .ds-slider:before {
+  background-color: #f7fbff;
+}

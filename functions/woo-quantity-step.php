@@ -170,7 +170,13 @@ add_filter( 'woocommerce_quantity_input_args', function ( $args, $product ) {
     $max = isset( $args['max_value'] ) ? (int) $args['max_value'] : 0;
     if ( $max > 0 && $min > $max ) { $min = $max; }
 
-    $args['min_value'] = $min; // do not increase min based on step
+    $input_value = isset( $args['input_value'] ) ? (int) $args['input_value'] : 0;
+    // Ensure min aligns with initial quantity so HTML5 validation accepts the first value.
+    if ( $input_value > $min ) {
+        $min = $input_value;
+    }
+
+    $args['min_value'] = $min;
     $current_value = isset( $args['input_value'] ) ? (int) $args['input_value'] : 0;
     if ( $current_value < $min ) {
         $args['input_value'] = $min; // auto-fill minimum order quantity

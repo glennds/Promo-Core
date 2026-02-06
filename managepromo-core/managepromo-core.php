@@ -59,6 +59,7 @@ managepromo_require_optional('woo_webshop_closure', 'functions/woo-webshop-closu
 managepromo_require_optional('woo_min_order_amount', 'functions/woo-min-order-amount.php', 'WooCommerce min order amount');
 managepromo_require_optional('woo_post_calculation_prices', 'functions/woo-post-calculation-prices.php', 'WooCommerce post-calculation prices');
 managepromo_require_optional('woo_email_product_attributes', 'functions/woo-email-product-attributes.php', 'WooCommerce email product attributes');
+managepromo_require_optional('woo_variable_product_flag', 'functions/woo-variable-product-flag.php', 'WooCommerce variable product flag');
 managepromo_require_optional('supplier_taxonomy_standalone', 'functions/supplier-standalone.php', 'Supplier taxonomy standalone');
 managepromo_require_optional('supplier_sync_multisite', 'functions/supplier-sync.php', 'Supplier sync multisite');
 managepromo_require_optional('network_supplier_orders', 'functions/network-supplier-orders.php', 'Network supplier orders');
@@ -67,7 +68,7 @@ managepromo_require_optional('users_redirect_guests_to_login', 'functions/users-
 managepromo_require_optional('users_restrict_login_to_subsite', 'functions/users-restrict-login-to-subsite.php', 'Users restrict login to subsite');
 managepromo_require_optional('users_disable_email_field', 'functions/users-disable-email-field.php', 'Users disable email field');
 managepromo_require_optional('users_bulkgen_exportimport', 'functions/users-bulkgen-exportimport.php', 'Users bulk generation import/export');
-managepromo_require_optional('users_mainsite_redirect', 'functions/users-mainsite-redirect.php', 'Users mainsite redirect');
+managepromo_require_optional('users_mainsite_redirect', 'mu-functions/users-mainsite-redirect.php', 'Users mainsite redirect');
 managepromo_require_optional('disable_gutenberg', 'functions/disable-gutenberg.php', 'Disable Gutenberg');
 managepromo_require_optional('woo_disable_downloads', 'functions/woo-disable-downloads.php', 'WooCommerce disable downloads');
 
@@ -110,6 +111,7 @@ function managepromo_sanitize_toggle_options($input) {
         'woo_min_order_amount'                      => 0,
         'woo_post_calculation_prices'               => 0,
         'woo_email_product_attributes'              => 0,
+        'woo_variable_product_flag'                 => 0,
         'supplier_taxonomy_standalone'              => 0,
         'supplier_sync_multisite'                   => 0,
         'network_supplier_orders'                   => 1,
@@ -122,8 +124,11 @@ function managepromo_sanitize_toggle_options($input) {
         'woo_disable_downloads'                     => 0
     ];
 
-    if (!is_array($input)) {$input = [];}                           // Prevent null if function is toggled off    
-    return array_merge($defaults, array_map('absint', $input));     // Fill empty value with 0
+    if (!is_array($input)) {$input = [];}                           // Prevent null if function is toggled off
+    $options = array_merge($defaults, array_map('absint', $input)); // Fill empty value with 0
+    $options['network_supplier_orders'] = 1;                        // Always enabled (no toggle)
+    $options['supplier_sync_multisite'] = $options['supplier_taxonomy_standalone'];
+    return $options;
 }
 
 add_action('admin_menu', function () {
@@ -176,6 +181,7 @@ function managepromo_features() {
         'woo_min_order_amount'                      => 0,
         'woo_post_calculation_prices'               => 0,
         'woo_email_product_attributes'              => 0,
+        'woo_variable_product_flag'                 => 0,
         'supplier_taxonomy_standalone'              => 0,
         'supplier_sync_multisite'                   => 0,
         'network_supplier_orders'                   => 1,
@@ -226,16 +232,6 @@ function managepromo_features() {
                 </thead>
                 <tbody>
                     <tr>
-                        <td style="font-weight: 600">VERBETEREN - Wijzig het template voor de admin nieuwe order e-mail</td>
-                        <td>
-                            <input type="hidden" name="ds_functiontoggles[woo_change_neworder_email]" value="0">
-                            <label class="ds-toggle">
-                                <input type="checkbox" name="ds_functiontoggles[woo_change_neworder_email]" value="1" <?php checked((int) ($options['woo_change_neworder_email'] ?? 0), 1); ?>>
-                                <span class="ds-slider"></span>
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
                         <td style="font-weight: 600">Productoverzicht weergavefilters op basis van Inkoopprijs & Reguliere Prijs</td>
                         <td>
                             <input type="hidden" name="ds_functiontoggles[woo_pricing_filters]" value="0">
@@ -266,6 +262,16 @@ function managepromo_features() {
                         </td>
                     </tr>
                     <tr>
+                        <td style="font-weight: 600">Enable Quantity Step</td>
+                        <td>
+                            <input type="hidden" name="mpc_enable_qty_step" value="0">
+                            <label class="ds-toggle">
+                                <input type="checkbox" name="mpc_enable_qty_step" value="1" <?php checked((int) $qty_step_enabled, 1); ?>>
+                                <span class="ds-slider"></span>
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
                         <td style="font-weight: 600">Prijs 'op nacalculatie' mogelijk maken</td>
                         <td>
                             <input type="hidden" name="ds_functiontoggles[woo_post_calculation_prices]" value="0">
@@ -286,31 +292,21 @@ function managepromo_features() {
                         </td>
                     </tr>
                     <tr>
-                        <td style="font-weight: 600">Supplier taxonomie (producten)</td>
+                        <td style="font-weight: 600">Variabele producten markeren (meta _ds_isvariable)</td>
+                        <td>
+                            <input type="hidden" name="ds_functiontoggles[woo_variable_product_flag]" value="0">
+                            <label class="ds-toggle">
+                                <input type="checkbox" name="ds_functiontoggles[woo_variable_product_flag]" value="1" <?php checked((int) ($options['woo_variable_product_flag'] ?? 0), 1); ?>>
+                                <span class="ds-slider"></span>
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600">Supplier taxonomie & sync (producten/multisite)</td>
                         <td>
                             <input type="hidden" name="ds_functiontoggles[supplier_taxonomy_standalone]" value="0">
                             <label class="ds-toggle">
                                 <input type="checkbox" name="ds_functiontoggles[supplier_taxonomy_standalone]" value="1" <?php checked((int) ($options['supplier_taxonomy_standalone'] ?? 0), 1); ?>>
-                                <span class="ds-slider"></span>
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="font-weight: 600">Supplier sync (multisite)</td>
-                        <td>
-                            <input type="hidden" name="ds_functiontoggles[supplier_sync_multisite]" value="0">
-                            <label class="ds-toggle">
-                                <input type="checkbox" name="ds_functiontoggles[supplier_sync_multisite]" value="1" <?php checked((int) ($options['supplier_sync_multisite'] ?? 0), 1); ?>>
-                                <span class="ds-slider"></span>
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="font-weight: 600">Network Supplier Orders (multisite)</td>
-                        <td>
-                            <input type="hidden" name="ds_functiontoggles[network_supplier_orders]" value="0">
-                            <label class="ds-toggle">
-                                <input type="checkbox" name="ds_functiontoggles[network_supplier_orders]" value="1" <?php checked((int) ($options['network_supplier_orders'] ?? 0), 1); ?>>
                                 <span class="ds-slider"></span>
                             </label>
                         </td>
@@ -398,16 +394,6 @@ function managepromo_features() {
                         </td>
                     </tr>
                     <tr>
-                        <td style="font-weight: 600">Enable Quantity Step</td>
-                        <td>
-                            <input type="hidden" name="mpc_enable_qty_step" value="0">
-                            <label class="ds-toggle">
-                                <input type="checkbox" name="mpc_enable_qty_step" value="1" <?php checked((int) $qty_step_enabled, 1); ?>>
-                                <span class="ds-slider"></span>
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
                         <td style="font-weight: 600">Downloadbare producten uitschakelen</td>
                         <td>
                             <input type="hidden" name="ds_functiontoggles[woo_disable_downloads]" value="0">
@@ -439,8 +425,18 @@ function managepromo_features() {
                 var form = enableBtn.closest('form');
                 var checkboxes = form.querySelectorAll('input[type="checkbox"][name^="ds_functiontoggles"]');
 
-                enableBtn.addEventListener('click', function() {checkboxes.forEach(function(cb) { cb.checked = true; });});
-                disableBtn.addEventListener('click', function() {checkboxes.forEach(function(cb) { cb.checked = false; });});
+                enableBtn.addEventListener('click', function() {
+                    checkboxes.forEach(function(cb) {
+                        if (cb.dataset.forceOn === '1' || cb.disabled) { return; }
+                        cb.checked = true;
+                    });
+                });
+                disableBtn.addEventListener('click', function() {
+                    checkboxes.forEach(function(cb) {
+                        if (cb.dataset.forceOn === '1' || cb.disabled) { return; }
+                        cb.checked = false;
+                    });
+                });
             });
             </script>
     </div>
@@ -462,13 +458,15 @@ add_action('admin_enqueue_scripts', function ($hook) {
 
 // Allow (de)activating functions Helper
 function managepromo_is_enabled($key) {
-    $options = get_option('ds_functiontoggles', []);
-    if (!is_array($options)) {$options = [];}
-
-    // Default-enable Network Supplier Orders unless explicitly disabled.
-    if ($key === 'network_supplier_orders' && !array_key_exists($key, $options)) {
+    if ($key === 'network_supplier_orders') {
         return true;
     }
+    if ($key === 'supplier_sync_multisite') {
+        return managepromo_is_enabled('supplier_taxonomy_standalone');
+    }
+
+    $options = get_option('ds_functiontoggles', []);
+    if (!is_array($options)) {$options = [];}
 
     return isset($options[$key]) && $options[$key] === 1;
 }
