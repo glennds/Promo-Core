@@ -78,7 +78,8 @@ function mpc_qty_step_normalize_qty( $qty, int $step, $product ): int {
     if ( $qty < $base ) {
         $adjusted = $base;
     } else {
-        $adjusted = $base + (int) ( floor( ( $qty - $base ) / $step ) * $step );
+        $steps    = (int) round( ( $qty - $base ) / $step );
+        $adjusted = $base + ( $steps * $step );
     }
 
     if ( $max > 0 && $adjusted > $max ) {
@@ -170,11 +171,17 @@ add_filter( 'woocommerce_quantity_input_args', function ( $args, $product ) {
     if ( $max > 0 && $min > $max ) { $min = $max; }
 
     $args['min_value'] = $min; // do not increase min based on step
+    $current_value = isset( $args['input_value'] ) ? (int) $args['input_value'] : 0;
+    if ( $current_value < $min ) {
+        $args['input_value'] = $min; // auto-fill minimum order quantity
+    }
 
     if ( empty( $args['custom_attributes'] ) || ! is_array( $args['custom_attributes'] ) ) {
         $args['custom_attributes'] = [];
     }
     $args['custom_attributes']['data-mpc-step'] = (string) $step;
+    $args['custom_attributes']['data-step']     = (string) $step;
+    $args['custom_attributes']['data-qty-step'] = (string) $step;
 
     return $args;
 }, 10, 2 );
@@ -189,7 +196,7 @@ add_filter( 'woocommerce_available_variation', function ( $data, $product, $vari
 }, 10, 3 );
 
 
-// Validation: add-to-cart (round down to nearest valid step)
+// Validation: add-to-cart (round to nearest valid step)
 add_filter( 'woocommerce_add_to_cart_validation', function ( $passed, $product_id, $quantity, $variation_id = 0 ) {
     $target_id = $variation_id ? $variation_id : $product_id;
     $product   = wc_get_product( $target_id );

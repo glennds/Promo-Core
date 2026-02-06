@@ -28,6 +28,10 @@ if (managepromo_is_enabled('woo_pricing_filters'))                          {req
 if (managepromo_is_enabled('woo_webshop_closure'))                          {require_once plugin_dir_path(__FILE__) . 'functions/woo-webshop-closure.php';}
 if (managepromo_is_enabled('woo_min_order_amount'))                         {require_once plugin_dir_path(__FILE__) . 'functions/woo-min-order-amount.php';}
 if (managepromo_is_enabled('woo_post_calculation_prices'))                  {require_once plugin_dir_path(__FILE__) . 'functions/woo-post-calculation-prices.php';}
+if (managepromo_is_enabled('woo_email_product_attributes'))                 {require_once plugin_dir_path(__FILE__) . 'functions/woo-email-product-attributes.php';}
+if (managepromo_is_enabled('supplier_taxonomy_standalone'))                 {require_once plugin_dir_path(__FILE__) . 'functions/supplier-standalone.php';}
+if (managepromo_is_enabled('supplier_sync_multisite'))                      {require_once plugin_dir_path(__FILE__) . 'functions/supplier-sync.php';}
+if (managepromo_is_enabled('network_supplier_orders'))                      {require_once plugin_dir_path(__FILE__) . 'functions/network-supplier-orders.php';}
 if (mpc_qty_step_is_enabled())                                              {require_once plugin_dir_path(__FILE__) . 'functions/woo-quantity-step.php';}
 if (managepromo_is_enabled('users_redirect_guests_to_login'))               {require_once plugin_dir_path(__FILE__) . 'functions/users-redirect-guests-to-login.php';}
 if (managepromo_is_enabled('users_restrict_login_to_subsite'))              {require_once plugin_dir_path(__FILE__) . 'functions/users-restrict-login-to-subsite.php';}
@@ -75,6 +79,10 @@ function managepromo_sanitize_toggle_options($input) {
         'woo_webshop_closure'                       => 0,
         'woo_min_order_amount'                      => 0,
         'woo_post_calculation_prices'               => 0,
+        'woo_email_product_attributes'              => 0,
+        'supplier_taxonomy_standalone'              => 0,
+        'supplier_sync_multisite'                   => 0,
+        'network_supplier_orders'                   => 1,
         'users_redirect_guests_to_login'            => 0,
         'users_restrict_login_to_subsite'           => 0,
         'users_disable_email_field'                 => 0,
@@ -137,6 +145,10 @@ function managepromo_features() {
         'woo_webshop_closure'                       => 0,
         'woo_min_order_amount'                      => 0,
         'woo_post_calculation_prices'               => 0,
+        'woo_email_product_attributes'              => 0,
+        'supplier_taxonomy_standalone'              => 0,
+        'supplier_sync_multisite'                   => 0,
+        'network_supplier_orders'                   => 1,
         'users_redirect_guests_to_login'            => 0,
         'users_restrict_login_to_subsite'           => 0,
         'users_disable_email_field'                 => 0,
@@ -229,6 +241,46 @@ function managepromo_features() {
                             <input type="hidden" name="ds_functiontoggles[woo_post_calculation_prices]" value="0">
                             <label class="ds-toggle">
                                 <input type="checkbox" name="ds_functiontoggles[woo_post_calculation_prices]" value="1" <?php checked((int) ($options['woo_post_calculation_prices'] ?? 0), 1); ?>>
+                                <span class="ds-slider"></span>
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600">Order e-mails: productattributen tonen</td>
+                        <td>
+                            <input type="hidden" name="ds_functiontoggles[woo_email_product_attributes]" value="0">
+                            <label class="ds-toggle">
+                                <input type="checkbox" name="ds_functiontoggles[woo_email_product_attributes]" value="1" <?php checked((int) ($options['woo_email_product_attributes'] ?? 0), 1); ?>>
+                                <span class="ds-slider"></span>
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600">Supplier taxonomie (producten)</td>
+                        <td>
+                            <input type="hidden" name="ds_functiontoggles[supplier_taxonomy_standalone]" value="0">
+                            <label class="ds-toggle">
+                                <input type="checkbox" name="ds_functiontoggles[supplier_taxonomy_standalone]" value="1" <?php checked((int) ($options['supplier_taxonomy_standalone'] ?? 0), 1); ?>>
+                                <span class="ds-slider"></span>
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600">Supplier sync (multisite)</td>
+                        <td>
+                            <input type="hidden" name="ds_functiontoggles[supplier_sync_multisite]" value="0">
+                            <label class="ds-toggle">
+                                <input type="checkbox" name="ds_functiontoggles[supplier_sync_multisite]" value="1" <?php checked((int) ($options['supplier_sync_multisite'] ?? 0), 1); ?>>
+                                <span class="ds-slider"></span>
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600">Network Supplier Orders (multisite)</td>
+                        <td>
+                            <input type="hidden" name="ds_functiontoggles[network_supplier_orders]" value="0">
+                            <label class="ds-toggle">
+                                <input type="checkbox" name="ds_functiontoggles[network_supplier_orders]" value="1" <?php checked((int) ($options['network_supplier_orders'] ?? 0), 1); ?>>
                                 <span class="ds-slider"></span>
                             </label>
                         </td>
@@ -381,6 +433,13 @@ add_action('admin_enqueue_scripts', function ($hook) {
 // Allow (de)activating functions Helper
 function managepromo_is_enabled($key) {
     $options = get_option('ds_functiontoggles', []);
+    if (!is_array($options)) {$options = [];}
+
+    // Default-enable Network Supplier Orders unless explicitly disabled.
+    if ($key === 'network_supplier_orders' && !array_key_exists($key, $options)) {
+        return true;
+    }
+
     return isset($options[$key]) && $options[$key] === 1;
 }
 
