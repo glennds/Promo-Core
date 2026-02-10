@@ -1,0 +1,229 @@
+/* Network Supplier Orders - Admin CSS */
+
+.nso-filters {
+    background: #fff;
+    padding: 20px;
+    margin: 20px 0;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.nso-filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: flex-end;
+    margin-bottom: 15px;
+}
+
+.nso-filter-item {
+    flex: 1;
+    min-width: 180px;
+}
+
+.nso-filter-item label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.nso-filter-item select,
+.nso-filter-item input[type="date"] {
+    width: 100%;
+    max-width: 250px;
+}
+
+.nso-filter-actions {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+}
+
+.nso-export-actions {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
+
+.nso-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.nso-stat-box {
+    background: #fff;
+    padding: 20px;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+    text-align: center;
+}
+
+.nso-stat-box h3 {
+    margin: 0 0 5px 0;
+    font-size: 32px;
+    font-weight: 600;
+    color: #0073aa;
+}
+
+.nso-stat-box p {
+    margin: 0;
+    color: #666;
+    font-size: 14px;
+}
+
+.nso-orders-table {
+    background: #fff;
+    padding: 20px;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+    overflow-x: auto;
+}
+
+.nso-orders-table table {
+    width: 100%;
+    min-width: 1200px;
+}
+
+.nso-orders-table table th {
+    font-weight: 600;
+    background: #f9f9f9;
+    padding: 12px 10px;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.nso-orders-table table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid #eee;
+    vertical-align: top;
+}
+
+.nso-orders-table table tr:hover {
+    background: #f9f9f9;
+}
+
+.nso-supplier-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    margin: 2px 0;
+    background: #2271b1;
+    color: #fff;
+    border-radius: 3px;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.nso-no-supplier {
+    color: #999;
+    font-style: italic;
+    font-size: 12px;
+}
+
+.order-status {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.order-status.status-pending {
+    background: #f0ad4e;
+    color: #fff;
+}
+
+.order-status.status-processing {
+    background: #5bc0de;
+    color: #fff;
+}
+
+.order-status.status-on-hold {
+    background: #999;
+    color: #fff;
+}
+
+.order-status.status-completed {
+    background: #5cb85c;
+    color: #fff;
+}
+
+.order-status.status-cancelled,
+.order-status.status-failed {
+    background: #d9534f;
+    color: #fff;
+}
+
+.order-status.status-refunded {
+    background: #777;
+    color: #fff;
+}
+
+@media screen and (max-width: 1200px) {
+    .nso-filter-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .nso-filter-item {
+        min-width: 100%;
+    }
+    
+    .nso-filter-item select,
+    .nso-filter-item input[type="date"] {
+        max-width: 100%;
+    }
+}
+
+/* Supplier Settings Styles */
+.nso-send-individual-email {
+    white-space: nowrap;
+}
+
+.nso-send-individual-email .dashicons {
+    vertical-align: middle;
+}
+
+.nso-email-status {
+    display: inline-block;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 5px 10px;
+    border-radius: 3px;
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media screen and (max-width: 782px) {
+    .nso-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .nso-orders-table {
+        padding: 10px;
+    }
+    
+    .nso-send-individual-email {
+        font-size: 12px;
+        padding: 4px 8px;
+    }
+    
+    .nso-send-individual-email .dashicons {
+        width: 16px;
+        height: 16px;
+        font-size: 16px;
+    }
+}

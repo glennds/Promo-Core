@@ -21,20 +21,56 @@ require_once plugin_dir_path(__FILE__) . 'mu-functions/force-woocommerce-hooks.p
 require_once plugin_dir_path(__FILE__) . 'mu-functions/choose-woocommerce-export-delimiter.php';
 require_once plugin_dir_path(__FILE__) . 'mu-functions/cleanup-breakdance.php';
 
+function managepromo_require_optional($key, $relative_path, $label = null) {
+    if (!managepromo_is_enabled($key)) {
+        return;
+    }
+
+    $file = plugin_dir_path(__FILE__) . ltrim($relative_path, '/');
+    if (is_readable($file)) {
+        require_once $file;
+        return;
+    }
+
+    $label = $label ?: $key;
+    $message = sprintf(
+        'ManagePromo Core: missing file for "%s" (%s). Please reinstall or reupload the plugin.',
+        $label,
+        $relative_path
+    );
+
+    if (is_admin()) {
+        $hook = function_exists('is_network_admin') && is_network_admin()
+            ? 'network_admin_notices'
+            : 'admin_notices';
+        add_action($hook, function () use ($message) {
+            echo '<div class="notice notice-error"><p>' . esc_html($message) . '</p></div>';
+        });
+    }
+
+    error_log($message);
+}
+
 // Load optional functions
-if (managepromo_is_enabled('site_logo'))                                    {require_once plugin_dir_path(__FILE__) . 'functions/add-sitelogo-setting.php';}
-if (managepromo_is_enabled('woo_change_neworder_email'))                    {require_once plugin_dir_path(__FILE__) . 'functions/woo-change-admin-neworder-email.php';}
-if (managepromo_is_enabled('woo_pricing_filters'))                          {require_once plugin_dir_path(__FILE__) . 'functions/woo-pricing-filters.php';}
-if (managepromo_is_enabled('woo_webshop_closure'))                          {require_once plugin_dir_path(__FILE__) . 'functions/woo-webshop-closure.php';}
-if (managepromo_is_enabled('woo_min_order_amount'))                         {require_once plugin_dir_path(__FILE__) . 'functions/woo-min-order-amount.php';}
-if (managepromo_is_enabled('woo_post_calculation_prices'))                  {require_once plugin_dir_path(__FILE__) . 'functions/woo-post-calculation-prices.php';}
-if (managepromo_is_enabled('users_redirect_guests_to_login'))               {require_once plugin_dir_path(__FILE__) . 'functions/users-redirect-guests-to-login.php';}
-if (managepromo_is_enabled('users_restrict_login_to_subsite'))              {require_once plugin_dir_path(__FILE__) . 'functions/users-restrict-login-to-subsite.php';}
-if (managepromo_is_enabled('users_disable_email_field'))                    {require_once plugin_dir_path(__FILE__) . 'functions/users-disable-email-field.php';}
-if (managepromo_is_enabled('users_bulkgen_exportimport'))                   {require_once plugin_dir_path(__FILE__) . 'functions/users-bulkgen-exportimport.php';}
-if (managepromo_is_enabled('users_mainsite_redirect'))                      {require_once plugin_dir_path(__FILE__) . 'functions/users-mainsite-redirect.php';}
-if (managepromo_is_enabled('disable_gutenberg'))                            {require_once plugin_dir_path(__FILE__) . 'functions/disable-gutenberg.php';}
-if (managepromo_is_enabled('woo_disable_downloads'))                        {require_once plugin_dir_path(__FILE__) . 'functions/woo-disable-downloads.php';}
+managepromo_require_optional('site_logo', 'functions/add-sitelogo-setting.php', 'Site logo');
+managepromo_require_optional('woo_change_neworder_email', 'functions/woo-change-admin-neworder-email.php', 'WooCommerce new order email');
+managepromo_require_optional('woo_pricing_filters', 'functions/woo-pricing-filters.php', 'WooCommerce pricing filters');
+managepromo_require_optional('woo_webshop_closure', 'functions/woo-webshop-closure.php', 'WooCommerce webshop closure');
+managepromo_require_optional('woo_min_order_amount', 'functions/woo-min-order-amount.php', 'WooCommerce min order amount');
+managepromo_require_optional('woo_post_calculation_prices', 'functions/woo-post-calculation-prices.php', 'WooCommerce post-calculation prices');
+managepromo_require_optional('woo_email_product_attributes', 'functions/woo-email-product-attributes.php', 'WooCommerce email product attributes');
+managepromo_require_optional('woo_variable_product_flag', 'functions/woo-variable-product-flag.php', 'WooCommerce variable product flag');
+managepromo_require_optional('supplier_taxonomy_standalone', 'functions/supplier-standalone.php', 'Supplier taxonomy standalone');
+managepromo_require_optional('supplier_sync_multisite', 'functions/supplier-sync.php', 'Supplier sync multisite');
+managepromo_require_optional('network_supplier_orders', 'functions/network-supplier-orders.php', 'Network supplier orders');
+if (mpc_qty_step_is_enabled()) { require_once plugin_dir_path(__FILE__) . 'functions/woo-quantity-step.php'; }
+managepromo_require_optional('users_redirect_guests_to_login', 'functions/users-redirect-guests-to-login.php', 'Users redirect guests to login');
+managepromo_require_optional('users_restrict_login_to_subsite', 'functions/users-restrict-login-to-subsite.php', 'Users restrict login to subsite');
+managepromo_require_optional('users_disable_email_field', 'functions/users-disable-email-field.php', 'Users disable email field');
+managepromo_require_optional('users_bulkgen_exportimport', 'functions/users-bulkgen-exportimport.php', 'Users bulk generation import/export');
+managepromo_require_optional('users_mainsite_redirect', 'mu-functions/users-mainsite-redirect.php', 'Users mainsite redirect');
+managepromo_require_optional('disable_gutenberg', 'functions/disable-gutenberg.php', 'Disable Gutenberg');
+managepromo_require_optional('woo_disable_downloads', 'functions/woo-disable-downloads.php', 'WooCommerce disable downloads');
 
 
 // Load assets for functions
@@ -58,6 +94,12 @@ add_action('admin_init', function() {
     'type' => 'array',
     'sanitize_callback' => 'managepromo_sanitize_toggle_options'
     ]);
+
+    register_setting('managepromo_settings', 'mpc_enable_qty_step', [
+    'type' => 'integer',
+    'sanitize_callback' => 'absint',
+    'default' => 0
+    ]);
 });
 
 function managepromo_sanitize_toggle_options($input) {
@@ -68,6 +110,11 @@ function managepromo_sanitize_toggle_options($input) {
         'woo_webshop_closure'                       => 0,
         'woo_min_order_amount'                      => 0,
         'woo_post_calculation_prices'               => 0,
+        'woo_email_product_attributes'              => 0,
+        'woo_variable_product_flag'                 => 0,
+        'supplier_taxonomy_standalone'              => 0,
+        'supplier_sync_multisite'                   => 0,
+        'network_supplier_orders'                   => 1,
         'users_redirect_guests_to_login'            => 0,
         'users_restrict_login_to_subsite'           => 0,
         'users_disable_email_field'                 => 0,
@@ -77,8 +124,11 @@ function managepromo_sanitize_toggle_options($input) {
         'woo_disable_downloads'                     => 0
     ];
 
-    if (!is_array($input)) {$input = [];}                           // Prevent null if function is toggled off    
-    return array_merge($defaults, array_map('absint', $input));     // Fill empty value with 0
+    if (!is_array($input)) {$input = [];}                           // Prevent null if function is toggled off
+    $options = array_merge($defaults, array_map('absint', $input)); // Fill empty value with 0
+    $options['network_supplier_orders'] = 1;                        // Always enabled (no toggle)
+    $options['supplier_sync_multisite'] = $options['supplier_taxonomy_standalone'];
+    return $options;
 }
 
 add_action('admin_menu', function () {
@@ -130,6 +180,11 @@ function managepromo_features() {
         'woo_webshop_closure'                       => 0,
         'woo_min_order_amount'                      => 0,
         'woo_post_calculation_prices'               => 0,
+        'woo_email_product_attributes'              => 0,
+        'woo_variable_product_flag'                 => 0,
+        'supplier_taxonomy_standalone'              => 0,
+        'supplier_sync_multisite'                   => 0,
+        'network_supplier_orders'                   => 1,
         'users_redirect_guests_to_login'            => 0,
         'users_restrict_login_to_subsite'           => 0,
         'users_disable_email_field'                 => 0,
@@ -138,6 +193,8 @@ function managepromo_features() {
         'disable_gutenberg'                         => 0,
         'woo_disable_downloads'                     => 0
     ]);
+
+    $qty_step_enabled = (int) get_option('mpc_enable_qty_step', 0);
     ?>
     <div class="wrap">
         <h1>ManagePromo Functies</h1>
@@ -175,16 +232,6 @@ function managepromo_features() {
                 </thead>
                 <tbody>
                     <tr>
-                        <td style="font-weight: 600">VERBETEREN - Wijzig het template voor de admin nieuwe order e-mail</td>
-                        <td>
-                            <input type="hidden" name="ds_functiontoggles[woo_change_neworder_email]" value="0">
-                            <label class="ds-toggle">
-                                <input type="checkbox" name="ds_functiontoggles[woo_change_neworder_email]" value="1" <?php checked((int) ($options['woo_change_neworder_email'] ?? 0), 1); ?>>
-                                <span class="ds-slider"></span>
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
                         <td style="font-weight: 600">Productoverzicht weergavefilters op basis van Inkoopprijs & Reguliere Prijs</td>
                         <td>
                             <input type="hidden" name="ds_functiontoggles[woo_pricing_filters]" value="0">
@@ -215,11 +262,51 @@ function managepromo_features() {
                         </td>
                     </tr>
                     <tr>
+                        <td style="font-weight: 600">Enable Quantity Step</td>
+                        <td>
+                            <input type="hidden" name="mpc_enable_qty_step" value="0">
+                            <label class="ds-toggle">
+                                <input type="checkbox" name="mpc_enable_qty_step" value="1" <?php checked((int) $qty_step_enabled, 1); ?>>
+                                <span class="ds-slider"></span>
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
                         <td style="font-weight: 600">Prijs 'op nacalculatie' mogelijk maken</td>
                         <td>
                             <input type="hidden" name="ds_functiontoggles[woo_post_calculation_prices]" value="0">
                             <label class="ds-toggle">
                                 <input type="checkbox" name="ds_functiontoggles[woo_post_calculation_prices]" value="1" <?php checked((int) ($options['woo_post_calculation_prices'] ?? 0), 1); ?>>
+                                <span class="ds-slider"></span>
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600">Order e-mails: productattributen tonen</td>
+                        <td>
+                            <input type="hidden" name="ds_functiontoggles[woo_email_product_attributes]" value="0">
+                            <label class="ds-toggle">
+                                <input type="checkbox" name="ds_functiontoggles[woo_email_product_attributes]" value="1" <?php checked((int) ($options['woo_email_product_attributes'] ?? 0), 1); ?>>
+                                <span class="ds-slider"></span>
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600">Variabele producten markeren (meta _ds_isvariable)</td>
+                        <td>
+                            <input type="hidden" name="ds_functiontoggles[woo_variable_product_flag]" value="0">
+                            <label class="ds-toggle">
+                                <input type="checkbox" name="ds_functiontoggles[woo_variable_product_flag]" value="1" <?php checked((int) ($options['woo_variable_product_flag'] ?? 0), 1); ?>>
+                                <span class="ds-slider"></span>
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600">Supplier taxonomie & sync (producten/multisite)</td>
+                        <td>
+                            <input type="hidden" name="ds_functiontoggles[supplier_taxonomy_standalone]" value="0">
+                            <label class="ds-toggle">
+                                <input type="checkbox" name="ds_functiontoggles[supplier_taxonomy_standalone]" value="1" <?php checked((int) ($options['supplier_taxonomy_standalone'] ?? 0), 1); ?>>
                                 <span class="ds-slider"></span>
                             </label>
                         </td>
@@ -338,8 +425,18 @@ function managepromo_features() {
                 var form = enableBtn.closest('form');
                 var checkboxes = form.querySelectorAll('input[type="checkbox"][name^="ds_functiontoggles"]');
 
-                enableBtn.addEventListener('click', function() {checkboxes.forEach(function(cb) { cb.checked = true; });});
-                disableBtn.addEventListener('click', function() {checkboxes.forEach(function(cb) { cb.checked = false; });});
+                enableBtn.addEventListener('click', function() {
+                    checkboxes.forEach(function(cb) {
+                        if (cb.dataset.forceOn === '1' || cb.disabled) { return; }
+                        cb.checked = true;
+                    });
+                });
+                disableBtn.addEventListener('click', function() {
+                    checkboxes.forEach(function(cb) {
+                        if (cb.dataset.forceOn === '1' || cb.disabled) { return; }
+                        cb.checked = false;
+                    });
+                });
             });
             </script>
     </div>
@@ -361,6 +458,19 @@ add_action('admin_enqueue_scripts', function ($hook) {
 
 // Allow (de)activating functions Helper
 function managepromo_is_enabled($key) {
+    if ($key === 'network_supplier_orders') {
+        return true;
+    }
+    if ($key === 'supplier_sync_multisite') {
+        return managepromo_is_enabled('supplier_taxonomy_standalone');
+    }
+
     $options = get_option('ds_functiontoggles', []);
+    if (!is_array($options)) {$options = [];}
+
     return isset($options[$key]) && $options[$key] === 1;
+}
+
+function mpc_qty_step_is_enabled() {
+    return (int) get_option('mpc_enable_qty_step', 0) === 1;
 }
