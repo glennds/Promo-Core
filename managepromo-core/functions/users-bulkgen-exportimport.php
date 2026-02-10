@@ -296,10 +296,11 @@ class managepromo_User_Batch {
 
     public function add_adminpage() {
         if ( ! self::is_subsite() ) return;
-        add_users_page(
-            'Bulk user management',
-            'Bulk user management',
+        add_submenu_page(
             'managepromo',
+            'Bulk user management',
+            'Bulk users',
+            'manage_options',
             'bulk-user-management',
             [ $this, 'render_bulk_page' ]
         );

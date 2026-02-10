@@ -98,7 +98,7 @@ add_action('admin_init', function() {
     register_setting('managepromo_settings', 'mpc_enable_qty_step', [
     'type' => 'integer',
     'sanitize_callback' => 'absint',
-    'default' => 1
+    'default' => 0
     ]);
 });
 
@@ -194,7 +194,7 @@ function managepromo_features() {
         'woo_disable_downloads'                     => 0
     ]);
 
-    $qty_step_enabled = (int) get_option('mpc_enable_qty_step', 1);
+    $qty_step_enabled = (int) get_option('mpc_enable_qty_step', 0);
     ?>
     <div class="wrap">
         <h1>ManagePromo Functies</h1>
@@ -472,5 +472,5 @@ function managepromo_is_enabled($key) {
 }
 
 function mpc_qty_step_is_enabled() {
-    return (int) get_option('mpc_enable_qty_step', 1) === 1;
+    return (int) get_option('mpc_enable_qty_step', 0) === 1;
 }
