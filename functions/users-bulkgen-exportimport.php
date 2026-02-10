@@ -1,6 +1,6 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) {exit;}
-if (!function_exists('managepromo_is_enabled') || !managepromo_is_enabled('users_bulkgen_exportimport')) {return;}
+if (!function_exists('managepromo_is_enabled')) {return;}
 
 //////////////////////////////////
 // Function contents start HERE //
@@ -18,6 +18,7 @@ if (!function_exists('managepromo_is_enabled') || !managepromo_is_enabled('users
  */
 
 class managepromo_User_Batch {
+    private bool $enabled = false;
     const DUMMY_DOMAIN    = 'dummy.managepromo.com';
     const META_PLAIN_PW   = 'ds_plain_password';
     const NONCE_GEN       = 'ds_gen_nonce';
@@ -40,7 +41,19 @@ class managepromo_User_Batch {
     }
 
     public function __construct() {
+        $this->enabled = function_exists( 'managepromo_is_enabled' ) && managepromo_is_enabled( 'users_bulkgen_exportimport' );
+
+        // Always register the admin page so direct access works.
+        add_action( 'admin_menu',                             [ $this, 'add_adminpage' ] );
+
+        if ( ! $this->enabled ) {
+            return;
+        }
+
         // Network Admin &#8594; Users (all sites)
+
+        // Allow pretty URL: /wp-admin/bulk-user-management &#8594; admin.php?page=bulk-user-management
+        add_action( 'init',                               [ $this, 'maybe_redirect_pretty_bulk_url' ] );
 
         add_action( 'admin_enqueue_scripts',              [ $this, 'enqueue_admin_assets' ] );
         add_action( 'admin_head-user-new.php',            [ $this, 'hide_email_fields' ] );
@@ -56,9 +69,6 @@ class managepromo_User_Batch {
 
         add_filter( 'woocommerce_account_menu_items',         [ $this, 'wc_hide_account_items' ] );
         add_action( 'template_redirect',                      [ $this, 'wc_block_edit_account_endpoint' ] );
-
-        // Single admin page under Users
-        add_action( 'admin_menu',                             [ $this, 'add_adminpage' ] );
 
         // Bulk generate + Export POST handlers
         add_action( 'admin_post_ds_bulk_generate',            [ $this, 'handle_bulk_generate' ] );
@@ -78,6 +88,42 @@ class managepromo_User_Batch {
 
     private static function is_subsite(): bool {
         return is_multisite() && ! is_network_admin();
+    }
+
+    private function bulk_page_capability(): string {
+        // Keep menu access permissive; enforce real permissions in render_bulk_page().
+        return 'read';
+    }
+
+    /**
+     * Redirect /wp-admin/bulk-user-management to the actual admin.php?page=… URL.
+     * This works when the request is routed through WordPress (common on Apache/Nginx).
+     */
+    public function maybe_redirect_pretty_bulk_url() {
+        if ( ! self::is_subsite() ) return;
+        if ( ! isset( $_SERVER['REQUEST_URI'], $_SERVER['REQUEST_METHOD'] ) ) return;
+
+        $method = strtoupper( (string) $_SERVER['REQUEST_METHOD'] );
+        if ( ! in_array( $method, [ 'GET', 'HEAD' ], true ) ) return;
+
+        $req_path = parse_url( (string) $_SERVER['REQUEST_URI'], PHP_URL_PATH );
+        if ( ! is_string( $req_path ) || $req_path === '' ) return;
+
+        $pretty_path = parse_url( admin_url( 'bulk-user-management' ), PHP_URL_PATH );
+        if ( ! is_string( $pretty_path ) || $pretty_path === '' ) return;
+
+        $req_path    = rtrim( $req_path, '/' );
+        $pretty_path = rtrim( $pretty_path, '/' );
+
+        if ( $req_path !== $pretty_path ) return;
+
+        $target = admin_url( 'admin.php?page=bulk-user-management' );
+        if ( ! is_user_logged_in() ) {
+            $target = wp_login_url( $target );
+        }
+
+        wp_safe_redirect( $target );
+        exit;
     }
 
     public function enqueue_admin_assets( $hook ) {
@@ -296,28 +342,50 @@ class managepromo_User_Batch {
 
     public function add_adminpage() {
         if ( ! self::is_subsite() ) return;
+        $cap = $this->bulk_page_capability();
+        if ( $this->enabled ) {
+            add_submenu_page(
+                'managepromo',
+                'Bulk user management',
+                'Bulk users',
+                $cap,
+                'bulk-user-management',
+                [ $this, 'render_bulk_page' ]
+            );
+        }
+
+        // Always register under Users so WP keeps a valid parent mapping for this slug.
         add_submenu_page(
-            'managepromo',
+            'users.php',
             'Bulk user management',
             'Bulk users',
-            'manage_options',
+            $cap,
             'bulk-user-management',
             [ $this, 'render_bulk_page' ]
         );
     }
 
     public function render_bulk_page() {
-        if ( ! current_user_can( 'manage_options' ) ) { wp_die( 'Geen rechten.' ); }
-
-        // Handle Import on the same page
-        $report = null;
-        if ( isset( $_POST['ds_import_csv_site'] ) ) {
-            check_admin_referer( 'ds_bulk_import_site' );
-            $report = ds_import_update_users_from_csv(); // returns details
+        if ( ! ( current_user_can( 'manage_options' ) || current_user_can( 'list_users' ) || is_super_admin() ) ) {
+            wp_die( 'Geen rechten.' );
         }
 
-        $roles = wp_roles()->get_names();
-        ?>
+        if ( ! $this->enabled ) {
+            echo '<div class="notice notice-error"><p>Bulk user management is disabled in ManagePromo settings.</p></div>';
+            return;
+        }
+
+        try {
+            // Handle Import on the same page
+            $report = null;
+            if ( isset( $_POST['ds_import_csv_site'] ) ) {
+                check_admin_referer( 'ds_bulk_import_site' );
+                $report = ds_import_update_users_from_csv(); // returns details
+            }
+
+            $roles_obj = function_exists( 'wp_roles' ) ? wp_roles() : null;
+            $roles     = $roles_obj ? $roles_obj->get_names() : [];
+            ?>
         <div class="wrap">
             <h1>Bulk accounts aanmaken / exporteren</h1>
 
@@ -401,7 +469,8 @@ class managepromo_User_Batch {
 
                     <?php
                     // Roles dropdown
-                    $roles         = wp_roles()->get_names();
+                    $roles_obj     = function_exists( 'wp_roles' ) ? wp_roles() : null;
+                    $roles         = $roles_obj ? $roles_obj->get_names() : [];
                     $default_role  = function_exists( 'wc' ) ? 'customer' : get_option( 'default_role', 'subscriber' );
                     // Keep safe: ensure default exists
                     if ( ! isset( $roles[ $default_role ] ) ) {
@@ -473,7 +542,16 @@ class managepromo_User_Batch {
             <?php endif; ?>
 
         </div>
-        <?php
+            <?php
+        } catch ( \Throwable $e ) {
+            error_log( sprintf(
+                'ManagePromo Bulk Users error: %s in %s:%d',
+                $e->getMessage(),
+                $e->getFile(),
+                $e->getLine()
+            ) );
+            wp_die( 'Bulk user management error. Check the server error log for details.' );
+        }
     }
 
     /* ---------------------- Actions (Generate / Export) --------------------- */

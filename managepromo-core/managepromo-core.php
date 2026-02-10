@@ -15,6 +15,8 @@
 
 // Security check
 defined('ABSPATH') || exit;
+if (defined('MANAGEPROMO_CORE_LOADED')) { return; }
+define('MANAGEPROMO_CORE_LOADED', true);
 
 // Load must-have functions
 require_once plugin_dir_path(__FILE__) . 'mu-functions/force-woocommerce-hooks.php';
@@ -22,7 +24,9 @@ require_once plugin_dir_path(__FILE__) . 'mu-functions/choose-woocommerce-export
 require_once plugin_dir_path(__FILE__) . 'mu-functions/cleanup-breakdance.php';
 
 function managepromo_require_optional($key, $relative_path, $label = null) {
-    if (!managepromo_is_enabled($key)) {
+    $enabled = managepromo_is_enabled($key);
+    $force_admin_load = is_admin() && $key === 'users_bulkgen_exportimport';
+    if (!$enabled && !$force_admin_load) {
         return;
     }
 
@@ -468,7 +472,7 @@ function managepromo_is_enabled($key) {
     $options = get_option('ds_functiontoggles', []);
     if (!is_array($options)) {$options = [];}
 
-    return isset($options[$key]) && $options[$key] === 1;
+    return isset($options[$key]) && (int) $options[$key] === 1;
 }
 
 function mpc_qty_step_is_enabled() {
