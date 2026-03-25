@@ -1,6 +1,6 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) { exit; }
-if ( ! function_exists( 'mpc_qty_step_is_enabled' ) || ! mpc_qty_step_is_enabled() ) { return; }
+if ( ! function_exists( 'managepromo_is_enabled' ) || ! managepromo_is_enabled( 'woo_quantity_step' ) ) { return; }
 
 //////////////////////////////////
 // Function contents start HERE //
