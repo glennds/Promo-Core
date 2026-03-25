@@ -1,245 +1,349 @@
 (function () {
-    function toNumber(val) {
-        var num = parseFloat(val);
-        return isFinite(num) ? num : NaN;
+    var DEBOUNCE_MS = 400;
+    var QTY_SELECTOR = 'input.qty, input[name="quantity"], input[name^="quantity"], input[name="mpc_grouped_quantity"]';
+
+    function toNumber(value) {
+        var number = parseFloat(value);
+        return isFinite(number) ? number : NaN;
+    }
+
+    function decimals(number) {
+        var stringValue = String(number);
+        var decimalIndex = stringValue.indexOf(".");
+        return decimalIndex === -1 ? 0 : stringValue.length - decimalIndex - 1;
     }
 
     function resolveStep(input) {
-        var step = null;
-        if (input) {
-            if (input.dataset && input.dataset.mpcStep) {
-                step = input.dataset.mpcStep;
-            }
-            if (!step) step = input.getAttribute('data-mpc-step');
-            if (!step) step = input.getAttribute('data-step');
-            if (!step) step = input.getAttribute('data-qty-step');
-            if (!step) step = input.getAttribute('step');
-        }
-        if (!step) step = '1';
-        if (step === 'any') step = '1';
-        var num = toNumber(step);
-        return (isFinite(num) && num > 0) ? num : 1;
+        var step = (input.dataset && input.dataset.mpcStep) || input.getAttribute("data-mpc-step") || input.getAttribute("data-step") || input.getAttribute("data-qty-step") || input.getAttribute("step") || "1";
+        step = step === "any" ? "1" : step;
+        step = toNumber(step);
+        return isFinite(step) && step > 0 ? step : 1;
     }
 
     function getMin(input) {
-        var min = toNumber(input.getAttribute('min'));
+        var min = input.getAttribute("data-mpc-min");
+        min = min === null || min === "" ? input.getAttribute("min") : min;
+        min = toNumber(min);
         return isFinite(min) ? min : 0;
     }
 
     function getMax(input) {
-        var max = toNumber(input.getAttribute('max'));
-        if (!isFinite(max) || max === 0) return null;
-        return max;
+        var max = toNumber(input.getAttribute("max"));
+        return !isFinite(max) || max === 0 ? null : max;
     }
 
-    function getBase(min, input) {
-        var base = isFinite(min) ? min : 0;
-        if (input) {
-            var stored = toNumber(input.getAttribute('data-mpc-base'));
-            if (isFinite(stored) && stored > base) {
-                base = stored;
-            } else {
-                var current = toNumber(input.value);
-                if (isFinite(current) && current > base) {
-                    base = current;
-                }
-            }
+    function formatNumber(value, input) {
+        var max = getMax(input);
+        var places = Math.max(decimals(resolveStep(input)), decimals(getMin(input)), max === null ? 0 : decimals(max));
+        return places > 0 ? parseFloat(value.toFixed(places)) : parseInt(value, 10);
+    }
+
+    function isQtyInput(element) {
+        if (!element || element.tagName !== "INPUT") {
+            return false;
         }
-        return base;
+
+        var type = String(element.getAttribute("type") || "").toLowerCase();
+        var name = String(element.getAttribute("name") || "");
+
+        return type !== "hidden" && (
+            element.classList.contains("qty") ||
+            name === "quantity" ||
+            name === "mpc_grouped_quantity" ||
+            name.indexOf("quantity[") === 0 ||
+            name.indexOf("quantity") === 0
+        );
     }
 
-    function decimals(num) {
-        var s = String(num);
-        var i = s.indexOf('.');
-        return i === -1 ? 0 : (s.length - i - 1);
-    }
-
-    function formatValue(value, step, base) {
-        var places = Math.max(decimals(step), decimals(base));
-        if (places > 0) {
-            value = parseFloat(value.toFixed(places));
+    function clearTimer(input) {
+        if (!input.__mpcDebounceTimer) {
+            return;
         }
-        return value;
-    }
 
-    function setValue(input, value) {
-        if (String(value) === String(input.value)) return;
-        if (input.__mpcAdjusting) return;
-        input.__mpcAdjusting = true;
-        input.value = String(value);
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        input.dispatchEvent(new Event('change', { bubbles: true }));
-        input.__mpcAdjusting = false;
-    }
-
-    function isQtyInput(el) {
-        if (!el || !el.tagName || el.tagName !== 'INPUT') return false;
-        var type = String(el.getAttribute('type') || '').toLowerCase();
-        var name = String(el.getAttribute('name') || '');
-        return el.classList.contains('qty') || name === 'quantity' || name.indexOf('quantity') === 0 || type === 'number';
-    }
-
-    function getPrev(input) {
-        var prev = toNumber(input.getAttribute('data-mpc-prev'));
-        if (!isFinite(prev)) {
-            prev = toNumber(input.value);
-        }
-        return isFinite(prev) ? prev : 0;
-    }
-
-    function setPrev(input, value) {
-        input.setAttribute('data-mpc-prev', String(value));
+        clearTimeout(input.__mpcDebounceTimer);
+        input.__mpcDebounceTimer = null;
     }
 
     function syncStepAttribute(input) {
         var step = resolveStep(input);
-        if (String(step) !== String(input.getAttribute('step'))) {
-            input.setAttribute('step', String(step));
-        }
-        if (input.step !== String(step)) {
-            input.step = String(step);
-        }
-        if (String(step) !== String(input.getAttribute('data-step'))) {
-            input.setAttribute('data-step', String(step));
-        }
-        if (String(step) !== String(input.getAttribute('data-qty-step'))) {
-            input.setAttribute('data-qty-step', String(step));
+
+        input.setAttribute("data-mpc-step", String(step));
+        input.setAttribute("data-step", String(step));
+        input.setAttribute("data-qty-step", String(step));
+        input.setAttribute("step", step > 1 ? "any" : "1");
+
+        if (input.step !== input.getAttribute("step")) {
+            input.step = input.getAttribute("step");
         }
     }
 
-    function normalizeValue(input) {
+    // Manual input is rounded to the nearest step, then clamped to min/max.
+    function normalizeValueNumber(value, input) {
         var step = resolveStep(input);
         var min = getMin(input);
         var max = getMax(input);
-        var base = getBase(min, input);
+        var normalized = value;
 
-        var current = toNumber(input.value);
-        if (!isFinite(current) || current < base) {
-            setValue(input, formatValue(base, step, base));
+        if (!isFinite(normalized)) {
+            return formatNumber(min, input);
+        }
+
+        if (max !== null && normalized > max) {
+            normalized = max;
+        }
+
+        if (normalized <= min) {
+            normalized = min;
+        } else if (step > 1) {
+            normalized = Math.round(normalized / step) * step;
+            if (normalized < min) {
+                normalized = min;
+            }
+        }
+
+        if (max !== null && normalized > max) {
+            normalized = step > 1 ? Math.floor(max / step) * step : max;
+            if (normalized < min) {
+                normalized = max >= min ? min : max;
+            }
+        }
+
+        return formatNumber(normalized, input);
+    }
+
+    function setValue(input, value) {
+        if (String(value) === String(input.value) || input.__mpcAdjusting) {
             return;
         }
 
-        var steps = Math.round((current - base) / step);
-        var next = base + (steps * step);
+        input.__mpcAdjusting = true;
+        input.value = String(value);
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+        input.__mpcAdjusting = false;
+    }
 
-        if (max !== null && next > max) {
-            next = base + (Math.floor((max - base) / step) * step);
+    function shouldDeferInput(input) {
+        var rawValue = String(input.value || "");
+        return rawValue === "" || rawValue === "-" || rawValue === "." || rawValue === "-.";
+    }
+
+    function normalizeNow(input) {
+        clearTimer(input);
+        if (input.__mpcAdjusting) {
+            return;
         }
-        if (next < base) next = base;
 
-        next = formatValue(next, step, base);
-        setValue(input, next);
+        syncStepAttribute(input);
+        if (shouldDeferInput(input)) {
+            setValue(input, formatNumber(getMin(input), input));
+            return;
+        }
+
+        setValue(input, normalizeValueNumber(toNumber(input.value), input));
+    }
+
+    // Debounce prevents partial typing like "1" -> "10" -> "100" from being corrected too early.
+    function scheduleNormalization(input) {
+        var currentValue;
+        var normalizedValue;
+
+        clearTimer(input);
+        if (input.__mpcAdjusting) {
+            return;
+        }
+
+        syncStepAttribute(input);
+        if (shouldDeferInput(input)) {
+            return;
+        }
+
+        currentValue = toNumber(input.value);
+        if (!isFinite(currentValue)) {
+            return;
+        }
+
+        normalizedValue = normalizeValueNumber(currentValue, input);
+        if (String(normalizedValue) === String(currentValue)) {
+            return;
+        }
+
+        input.__mpcDebounceTimer = window.setTimeout(function () {
+            normalizeNow(input);
+        }, DEBOUNCE_MS);
+    }
+
+    function getFirstSteppedValue(min, step) {
+        var firstValue = Math.ceil(min / step) * step;
+        return firstValue < min ? min : firstValue;
+    }
+
+    function getSteppedButtonValue(input, direction) {
+        var step = resolveStep(input);
+        var min = getMin(input);
+        var max = getMax(input);
+        var currentValue = normalizeValueNumber(toNumber(input.value), input);
+        var nextValue = currentValue;
+
+        if (step <= 1) {
+            nextValue = currentValue + (direction === "up" ? 1 : -1);
+            if (nextValue < min) {
+                nextValue = min;
+            }
+            if (max !== null && nextValue > max) {
+                nextValue = max;
+            }
+            return formatNumber(nextValue, input);
+        }
+
+        if (direction === "up") {
+            if (currentValue <= min) {
+                nextValue = getFirstSteppedValue(min, step);
+                if (nextValue <= currentValue) {
+                    nextValue = currentValue + step;
+                }
+            } else {
+                nextValue = Math.ceil(currentValue / step) * step;
+                if (nextValue <= currentValue) {
+                    nextValue += step;
+                }
+            }
+        } else if (currentValue <= min) {
+            nextValue = min;
+        } else if (Math.abs((currentValue / step) - Math.round(currentValue / step)) > 0.000001) {
+            nextValue = Math.floor(currentValue / step) * step;
+        } else {
+            nextValue = currentValue - step;
+            if (nextValue < min) {
+                nextValue = min;
+            }
+        }
+
+        if (max !== null && nextValue > max) {
+            nextValue = Math.floor(max / step) * step;
+            if (nextValue < min) {
+                nextValue = max >= min ? min : max;
+            }
+        }
+
+        return formatNumber(nextValue, input);
+    }
+
+    function handleStepperClick(button, direction) {
+        var wrapper = button.closest(".quantity");
+        var input = wrapper ? wrapper.querySelector(QTY_SELECTOR) : null;
+
+        if (!input || input.disabled || input.readOnly) {
+            return;
+        }
+
+        clearTimer(input);
+        syncStepAttribute(input);
+        setValue(input, getSteppedButtonValue(input, direction));
     }
 
     function initInput(input) {
-        var step = resolveStep(input);
-        var min = getMin(input);
-        var base = getBase(min, input);
-
-        var current = toNumber(input.value);
-        if (!isFinite(current) || current < base) {
-            setValue(input, formatValue(base, step, base));
-            current = base;
+        if (!isQtyInput(input)) {
+            return;
         }
-        input.setAttribute('data-mpc-base', String(current));
-        setPrev(input, current);
-    }
 
-    function handleStepperClick(btn, dir) {
-        var wrapper = btn.closest('.quantity');
-        var input = wrapper ? wrapper.querySelector('input.qty, input[name="quantity"], input[name^="quantity"]') : null;
-        if (!input || input.disabled || input.readOnly) return;
-
+        clearTimer(input);
         syncStepAttribute(input);
 
-        var step = resolveStep(input);
-        var min = getMin(input);
-        var max = getMax(input);
-        var currentValue = toNumber(input.value);
-        if (!isFinite(currentValue)) currentValue = min;
-        if (!isFinite(toNumber(input.getAttribute('data-mpc-base')))) {
-            input.setAttribute('data-mpc-base', String(currentValue));
-        }
-        var base = getBase(min, input);
-
-        var prev = getPrev(input);
-        if (prev < base) prev = base;
-
-        var next = (dir === 'up') ? (prev + step) : (prev - step);
-        if (next < base) next = base;
-        if (max !== null && next > max) next = max;
-
-        next = formatValue(next, step, base);
-
-        // Roll back to previous value then apply our step to bypass default behavior.
-        setValue(input, prev);
-        setValue(input, next);
-        setPrev(input, next);
-    }
-
-    document.addEventListener('click', function (e) {
-        var inc = e.target.closest('.bde-quantity-button--inc');
-        if (inc) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            handleStepperClick(inc, 'up');
+        if (shouldDeferInput(input)) {
+            setValue(input, formatNumber(getMin(input), input));
             return;
         }
 
-        var dec = e.target.closest('.bde-quantity-button--dec');
-        if (dec) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            handleStepperClick(dec, 'down');
+        var normalizedValue = normalizeValueNumber(toNumber(input.value), input);
+        if (String(normalizedValue) !== String(input.value)) {
+            setValue(input, normalizedValue);
+        }
+    }
+
+    document.addEventListener("click", function (event) {
+        var increaseButton = event.target.closest(".bde-quantity-button--inc");
+        var decreaseButton;
+
+        if (increaseButton) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+            handleStepperClick(increaseButton, "up");
             return;
         }
+
+        decreaseButton = event.target.closest(".bde-quantity-button--dec");
+        if (!decreaseButton) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        handleStepperClick(decreaseButton, "down");
     }, true);
 
-    document.addEventListener('change', function (e) {
-        if (!isQtyInput(e.target)) return;
-        normalizeValue(e.target);
-        setPrev(e.target, toNumber(e.target.value));
-    });
-
-    document.addEventListener('blur', function (e) {
-        if (!isQtyInput(e.target)) return;
-        normalizeValue(e.target);
-        setPrev(e.target, toNumber(e.target.value));
-    }, true);
-
-    document.addEventListener('DOMContentLoaded', function () {
-        var inputs = document.querySelectorAll('input.qty, input[name="quantity"], input[name^="quantity"]');
-        for (var i = 0; i < inputs.length; i++) {
-            if (!isQtyInput(inputs[i])) continue;
-            syncStepAttribute(inputs[i]);
-            initInput(inputs[i]);
+    document.addEventListener("input", function (event) {
+        if (isQtyInput(event.target) && !event.target.__mpcAdjusting) {
+            scheduleNormalization(event.target);
         }
     });
 
-    if (window.jQuery) {
-        window.jQuery(document).on('found_variation', '.variations_form', function (event, variation) {
-            var form = event.currentTarget;
-            if (!form) return;
-            var input = form.querySelector('input.qty, input[name="quantity"], input[name^="quantity"]');
-            if (!input) return;
+    document.addEventListener("change", function (event) {
+        if (isQtyInput(event.target) && !event.target.__mpcAdjusting) {
+            normalizeNow(event.target);
+        }
+    });
 
-            if (variation.step) input.setAttribute('data-mpc-step', variation.step);
-            if (variation.min_qty) input.setAttribute('min', variation.min_qty);
-            if (variation.max_qty) input.setAttribute('max', variation.max_qty);
+    document.addEventListener("blur", function (event) {
+        if (isQtyInput(event.target) && !event.target.__mpcAdjusting) {
+            normalizeNow(event.target);
+        }
+    }, true);
 
-            syncStepAttribute(input);
-            initInput(input);
-        });
+    document.addEventListener("DOMContentLoaded", function () {
+        var inputs = document.querySelectorAll(QTY_SELECTOR);
+        var index;
 
-        window.jQuery(document).on('reset_data', '.variations_form', function (event) {
-            var form = event.currentTarget;
-            if (!form) return;
-            var input = form.querySelector('input.qty, input[name="quantity"], input[name^="quantity"]');
-            if (!input) return;
-            syncStepAttribute(input);
-            initInput(input);
-        });
+        for (index = 0; index < inputs.length; index += 1) {
+            initInput(inputs[index]);
+        }
+    });
+
+    if (!window.jQuery) {
+        return;
     }
+
+    // Variations replace the allowed step/min values dynamically.
+    window.jQuery(document).on("found_variation", ".variations_form", function (event, variation) {
+        var form = event.currentTarget;
+        var input = form ? form.querySelector('input.qty, input[name="quantity"]') : null;
+
+        if (!input) {
+            return;
+        }
+
+        if (variation.step) {
+            input.setAttribute("data-mpc-step", variation.step);
+        }
+        if (variation.min_qty !== undefined) {
+            input.setAttribute("min", variation.min_qty);
+            input.setAttribute("data-mpc-min", variation.min_qty);
+        }
+        if (variation.max_qty !== undefined) {
+            input.setAttribute("max", variation.max_qty);
+        }
+
+        initInput(input);
+    });
+
+    window.jQuery(document).on("reset_data", ".variations_form", function (event) {
+        var form = event.currentTarget;
+        var input = form ? form.querySelector('input.qty, input[name="quantity"]') : null;
+
+        if (input) {
+            initInput(input);
+        }
+    });
 })();

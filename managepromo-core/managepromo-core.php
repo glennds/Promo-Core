@@ -60,10 +60,11 @@ managepromo_require_optional('woo_min_order_amount', 'functions/woo-min-order-am
 managepromo_require_optional('woo_post_calculation_prices', 'functions/woo-post-calculation-prices.php', 'WooCommerce post-calculation prices');
 managepromo_require_optional('woo_email_product_attributes', 'functions/woo-email-product-attributes.php', 'WooCommerce email product attributes');
 managepromo_require_optional('woo_variable_product_flag', 'functions/woo-variable-product-flag.php', 'WooCommerce variable product flag');
+managepromo_require_optional('woo_trackntrace_field', 'functions/woo-trackntrace-field.php', 'WooCommerce Track & Trace field');
 managepromo_require_optional('supplier_taxonomy_standalone', 'functions/supplier-standalone.php', 'Supplier taxonomy standalone');
 managepromo_require_optional('supplier_sync_multisite', 'functions/supplier-sync.php', 'Supplier sync multisite');
 managepromo_require_optional('network_supplier_orders', 'functions/network-supplier-orders.php', 'Network supplier orders');
-if (mpc_qty_step_is_enabled()) { require_once plugin_dir_path(__FILE__) . 'functions/woo-quantity-step.php'; }
+managepromo_require_optional('woo_quantity_step', 'functions/woo-quantity-step.php', 'WooCommerce quantity step');
 managepromo_require_optional('users_redirect_guests_to_login', 'functions/users-redirect-guests-to-login.php', 'Users redirect guests to login');
 managepromo_require_optional('users_restrict_login_to_subsite', 'functions/users-restrict-login-to-subsite.php', 'Users restrict login to subsite');
 managepromo_require_optional('users_disable_email_field', 'functions/users-disable-email-field.php', 'Users disable email field');
@@ -112,6 +113,7 @@ function managepromo_sanitize_toggle_options($input) {
         'woo_post_calculation_prices'               => 0,
         'woo_email_product_attributes'              => 0,
         'woo_variable_product_flag'                 => 0,
+        'woo_trackntrace_field'                     => 0,
         'supplier_taxonomy_standalone'              => 0,
         'supplier_sync_multisite'                   => 0,
         'network_supplier_orders'                   => 1,
@@ -182,6 +184,7 @@ function managepromo_features() {
         'woo_post_calculation_prices'               => 0,
         'woo_email_product_attributes'              => 0,
         'woo_variable_product_flag'                 => 0,
+        'woo_trackntrace_field'                     => 0,
         'supplier_taxonomy_standalone'              => 0,
         'supplier_sync_multisite'                   => 0,
         'network_supplier_orders'                   => 1,
@@ -297,6 +300,16 @@ function managepromo_features() {
                             <input type="hidden" name="ds_functiontoggles[woo_variable_product_flag]" value="0">
                             <label class="ds-toggle">
                                 <input type="checkbox" name="ds_functiontoggles[woo_variable_product_flag]" value="1" <?php checked((int) ($options['woo_variable_product_flag'] ?? 0), 1); ?>>
+                                <span class="ds-slider"></span>
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600">Track & Trace veld toevoegen aan orders</td>
+                        <td>
+                            <input type="hidden" name="ds_functiontoggles[woo_trackntrace_field]" value="0">
+                            <label class="ds-toggle">
+                                <input type="checkbox" name="ds_functiontoggles[woo_trackntrace_field]" value="1" <?php checked((int) ($options['woo_trackntrace_field'] ?? 0), 1); ?>>
                                 <span class="ds-slider"></span>
                             </label>
                         </td>
@@ -460,6 +473,9 @@ add_action('admin_enqueue_scripts', function ($hook) {
 function managepromo_is_enabled($key) {
     if ($key === 'network_supplier_orders') {
         return true;
+    }
+    if ($key === 'woo_quantity_step') {
+        return mpc_qty_step_is_enabled();
     }
     if ($key === 'supplier_sync_multisite') {
         return managepromo_is_enabled('supplier_taxonomy_standalone');
