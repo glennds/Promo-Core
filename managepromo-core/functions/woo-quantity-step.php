@@ -7,49 +7,54 @@ function mpc_qty_step_sanitize( $raw ): int {
     return $step > 0 ? $step : 1;
 }
 
-if ( ! function_exists( 'mpc_get_grouped_request_parent_product' ) ) {
-    // Shared with the min-order feature so grouped children can follow the parent rules.
-    function mpc_get_grouped_request_parent_product() {
-        static $resolved = false;
-        static $product  = null;
+if ( ! function_exists( 'mpc_print_product_type_visibility_script' ) ) {
+    // WooCommerce does not always reveal custom fields reliably for extension product types.
+    function mpc_print_product_type_visibility_script() {
+        if ( ! is_admin() ) { return; }
 
-        if ( $resolved ) { return $product; }
-        $resolved = true;
+        $screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+        if ( ! $screen || 'product' !== $screen->post_type ) { return; }
+        ?>
+        <script>
+            jQuery(function ($) {
+                function toggleMpcProductFields() {
+                    var type = $("#product-type").val() || "";
+                    $(".mpc-show-if-simple, .mpc-show-if-variable, .mpc-show-if-bundle").hide();
+                    if (type === "simple") { $(".mpc-show-if-simple").show(); }
+                    if (type === "variable") { $(".mpc-show-if-variable").show(); }
+                    if (type === "bundle") { $(".mpc-show-if-bundle").show(); }
+                }
 
-        $parent_id = isset( $_REQUEST['add-to-cart'] ) ? absint( wp_unslash( $_REQUEST['add-to-cart'] ) ) : 0;
-        if ( $parent_id < 1 || ! isset( $_REQUEST['mpc_grouped_quantity'] ) ) { return null; }
+                $(document.body).on("woocommerce-product-type-change", toggleMpcProductFields);
+                $("#product-type").on("change", toggleMpcProductFields);
+                toggleMpcProductFields();
+            });
+        </script>
+        <?php
+    }
 
-        $candidate = wc_get_product( $parent_id );
-        if ( ! $candidate || ! $candidate->is_type( 'grouped' ) ) { return null; }
+    add_action( 'admin_footer', 'mpc_print_product_type_visibility_script', 50 );
+}
 
-        $product = $candidate;
-        return $product;
+if ( ! function_exists( 'mpc_is_bundled_cart_item' ) ) {
+    // Product Bundles identifies child cart items with the `bundled_by` relationship field.
+    function mpc_is_bundled_cart_item( array $cart_item ): bool {
+        if ( function_exists( 'wc_pb_is_bundled_cart_item' ) ) {
+            return wc_pb_is_bundled_cart_item( $cart_item, WC()->cart ? WC()->cart->get_cart() : false );
+        }
+
+        return ! empty( $cart_item['bundled_by'] );
     }
 }
 
-if ( ! function_exists( 'mpc_get_quantity_rules_product' ) ) {
-    function mpc_get_quantity_rules_product( $product, array $cart_item = [] ) {
-        if ( is_numeric( $product ) ) { $product = wc_get_product( (int) $product ); }
-        if ( ! $product || ! is_a( $product, 'WC_Product' ) ) { return null; }
+if ( ! function_exists( 'mpc_get_cart_item_from_quantity_input_args' ) ) {
+    // Cart quantity inputs expose the cart item key in their input name.
+    function mpc_get_cart_item_from_quantity_input_args( array $args ): array {
+        if ( empty( $args['input_name'] ) || ! is_string( $args['input_name'] ) || ! WC()->cart ) { return []; }
+        if ( ! preg_match( '/^cart\[([^\]]+)\]\[qty\]$/', $args['input_name'], $matches ) ) { return []; }
 
-        $grouped_parent_id = isset( $cart_item['mpc_grouped_parent_id'] ) ? absint( $cart_item['mpc_grouped_parent_id'] ) : 0;
-        if ( $grouped_parent_id > 0 ) {
-            $grouped_parent = wc_get_product( $grouped_parent_id );
-            if ( $grouped_parent && $grouped_parent->is_type( 'grouped' ) ) { return $grouped_parent; }
-        }
-
-        $request_parent = mpc_get_grouped_request_parent_product();
-        if ( ! $request_parent ) { return $product; }
-
-        $children          = array_map( 'absint', $request_parent->get_children() );
-        $product_id        = $product->get_id();
-        $product_parent_id = $product->is_type( 'variation' ) ? $product->get_parent_id() : 0;
-
-        if ( in_array( $product_id, $children, true ) || ( $product_parent_id > 0 && in_array( $product_parent_id, $children, true ) ) ) {
-            return $request_parent;
-        }
-
-        return $product;
+        $cart_item = WC()->cart->get_cart_item( wc_clean( $matches[1] ) );
+        return is_array( $cart_item ) ? $cart_item : [];
     }
 }
 
@@ -65,31 +70,33 @@ if ( ! function_exists( 'mpc_get_builtin_min_purchase_quantity' ) ) {
 
 if ( ! function_exists( 'mpc_get_effective_min_quantity' ) ) {
     function mpc_get_effective_min_quantity( $product, array $cart_item = [] ): int {
-        $rules_product = mpc_get_quantity_rules_product( $product, $cart_item );
-        if ( ! $rules_product || ! is_a( $rules_product, 'WC_Product' ) ) { return 1; }
-        return mpc_get_builtin_min_purchase_quantity( $rules_product );
+        if ( $cart_item && mpc_is_bundled_cart_item( $cart_item ) ) { return 1; }
+        return mpc_get_builtin_min_purchase_quantity( $product );
     }
 }
 
 function mpc_qty_step_get_step( $product, array $cart_item = [] ): int {
-    $product = mpc_get_quantity_rules_product( $product, $cart_item );
+    if ( $cart_item && mpc_is_bundled_cart_item( $cart_item ) ) { return 1; }
+    if ( is_numeric( $product ) ) { $product = wc_get_product( (int) $product ); }
     if ( ! $product || ! is_a( $product, 'WC_Product' ) ) { return 1; }
 
-    $step = absint( get_post_meta( $product->get_id(), '_mpc_qty_step', true ) );
-    if ( $step < 1 && $product->is_type( 'variation' ) ) {
+    if ( $product->is_type( 'variation' ) ) {
         $parent_id = $product->get_parent_id();
-        if ( $parent_id > 0 ) { $step = absint( get_post_meta( $parent_id, '_mpc_qty_step', true ) ); }
+        $step      = $parent_id > 0 ? absint( get_post_meta( $parent_id, '_mpc_qty_step', true ) ) : 0;
+        return $step > 0 ? $step : 1;
     }
 
+    $step = absint( get_post_meta( $product->get_id(), '_mpc_qty_step', true ) );
     return $step > 0 ? $step : 1;
 }
 
 function mpc_qty_step_get_max( $product, array $cart_item = [] ): int {
-    $rules_product = mpc_get_quantity_rules_product( $product, $cart_item );
-    return ( $rules_product && is_a( $rules_product, 'WC_Product' ) ) ? (int) $rules_product->get_max_purchase_quantity() : 0;
+    if ( $cart_item && mpc_is_bundled_cart_item( $cart_item ) ) { return 0; }
+    if ( is_numeric( $product ) ) { $product = wc_get_product( (int) $product ); }
+    return ( $product && is_a( $product, 'WC_Product' ) ) ? (int) $product->get_max_purchase_quantity() : 0;
 }
 
-// Round to the nearest step, then clamp back up to the configured minimum.
+// Round to the nearest step, then clamp back to the allowed minimum and maximum.
 function mpc_qty_step_normalize_qty( $qty, int $step, $product, array $cart_item = [] ): int {
     $qty  = max( 0, (int) wc_stock_amount( $qty ) );
     $step = max( 1, absint( $step ) );
@@ -113,91 +120,8 @@ function mpc_qty_step_normalize_qty( $qty, int $step, $product, array $cart_item
     return max( 1, (int) $adjusted );
 }
 
-if ( ! managepromo_is_enabled( 'woo_min_order_amount' ) ) {
-    function mpc_grouped_qty_render_master_input() {
-        if ( ! function_exists( 'is_product' ) || ! is_product() ) { return; }
-        global $product;
-        if ( ! $product || ! is_a( $product, 'WC_Product' ) || ! $product->is_type( 'grouped' ) ) { return; }
-
-        $min = mpc_get_effective_min_quantity( $product );
-        $max = (int) $product->get_max_purchase_quantity();
-
-        echo '<div class="mpc-grouped-master-quantity">';
-        echo '<label for="mpc-grouped-quantity">' . esc_html__( 'Quantity', 'woocommerce' ) . '</label>';
-        woocommerce_quantity_input(
-            [
-                'input_id'    => 'mpc-grouped-quantity',
-                'input_name'  => 'mpc_grouped_quantity',
-                'input_value' => $min,
-                'min_value'   => $min,
-                'max_value'   => $max,
-            ],
-            $product,
-            true
-        );
-        echo '</div>';
-    }
-
-    function mpc_grouped_qty_replace_child_quantity_column( $value, $grouped_product_child ) {
-        if ( ! is_product() ) { return $value; }
-        global $product;
-
-        if (
-            ! $product || ! is_a( $product, 'WC_Product' ) || ! $product->is_type( 'grouped' ) ||
-            ! $grouped_product_child || ! is_a( $grouped_product_child, 'WC_Product' )
-        ) {
-            return $value;
-        }
-
-        if ( ! $grouped_product_child->is_purchasable() || ! $grouped_product_child->is_in_stock() ) { return ''; }
-
-        return sprintf(
-            '<input type="hidden" class="mpc-grouped-child-qty" name="quantity[%1$d]" value="1" data-product-id="%1$d" />',
-            absint( $grouped_product_child->get_id() )
-        );
-    }
-
-    function mpc_grouped_qty_apply_request_quantities() {
-        $grouped_parent = mpc_get_grouped_request_parent_product();
-        if ( ! $grouped_parent ) { return; }
-
-        $raw_qty = isset( $_REQUEST['mpc_grouped_quantity'] ) ? wc_clean( wp_unslash( $_REQUEST['mpc_grouped_quantity'] ) ) : '';
-        if ( '' === $raw_qty ) { return; }
-
-        $quantity          = mpc_qty_step_normalize_qty( $raw_qty, mpc_qty_step_get_step( $grouped_parent ), $grouped_parent );
-        $posted_quantities = isset( $_REQUEST['quantity'] ) && is_array( $_REQUEST['quantity'] ) ? wp_unslash( $_REQUEST['quantity'] ) : [];
-        $normalized        = [];
-
-        foreach ( $grouped_parent->get_children() as $child_id ) {
-            $child = wc_get_product( $child_id );
-            if ( ! $child || ! $child->is_purchasable() || ! $child->is_in_stock() ) { continue; }
-            $normalized[ $child_id ] = $quantity;
-        }
-
-        $_REQUEST['quantity'] = array_merge( $posted_quantities, $normalized );
-        $_POST['quantity']    = $_REQUEST['quantity'];
-    }
-
-    function mpc_grouped_qty_attach_cart_item_parent( $cart_item_data, $product_id, $variation_id ) {
-        $grouped_parent = mpc_get_grouped_request_parent_product();
-        if ( ! $grouped_parent ) { return $cart_item_data; }
-
-        $children = array_map( 'absint', $grouped_parent->get_children() );
-        if ( in_array( absint( $product_id ), $children, true ) || ( $variation_id > 0 && in_array( absint( $variation_id ), $children, true ) ) ) {
-            $cart_item_data['mpc_grouped_parent_id'] = $grouped_parent->get_id();
-        }
-
-        return $cart_item_data;
-    }
-
-    add_action( 'woocommerce_before_add_to_cart_button', 'mpc_grouped_qty_render_master_input', 5 );
-    add_filter( 'woocommerce_grouped_product_list_column_quantity', 'mpc_grouped_qty_replace_child_quantity_column', 10, 2 );
-    add_action( 'wp_loaded', 'mpc_grouped_qty_apply_request_quantities', 5 );
-    add_filter( 'woocommerce_add_cart_item_data', 'mpc_grouped_qty_attach_cart_item_parent', 10, 3 );
-}
-
-// Admin fields: all base product types in General, variations inside the variation panel.
-add_action( 'woocommerce_product_options_general_product_data', function () {
+// Admin field: use the Inventory tab for simple, variable, and bundle products.
+add_action( 'woocommerce_product_options_inventory_product_data', function () {
     global $product_object;
     $product_id = ( $product_object && is_a( $product_object, 'WC_Product' ) ) ? $product_object->get_id() : 0;
     $current    = $product_id > 0 ? get_post_meta( $product_id, '_mpc_qty_step', true ) : '';
@@ -209,8 +133,9 @@ add_action( 'woocommerce_product_options_general_product_data', function () {
             'type'              => 'number',
             'desc_tip'          => true,
             'description'       => 'Increase/decrease quantity in steps of X on the frontend.',
+            'placeholder'       => '1',
             'value'             => '' !== $current && null !== $current ? $current : 1,
-            'wrapper_class'     => 'show_if_simple show_if_variable show_if_grouped',
+            'wrapper_class'     => 'show_if_simple show_if_variable show_if_bundle mpc-show-if-simple mpc-show-if-variable mpc-show-if-bundle',
             'custom_attributes' => [ 'min' => '1', 'step' => '1' ],
         ]
     );
@@ -221,35 +146,15 @@ add_action( 'woocommerce_admin_process_product_object', function ( $product ) {
     $product->update_meta_data( '_mpc_qty_step', mpc_qty_step_sanitize( wc_clean( wp_unslash( $_POST['_mpc_qty_step'] ) ) ) );
 } );
 
-add_action( 'woocommerce_variation_options_pricing', function ( $loop, $variation_data, $variation ) {
-    $current = get_post_meta( $variation->ID, '_mpc_qty_step', true );
-
-    woocommerce_wp_text_input(
-        [
-            'id'                => "mpc_qty_step[$loop]",
-            'name'              => "mpc_qty_step[$loop]",
-            'label'             => 'Quantity step',
-            'type'              => 'number',
-            'desc_tip'          => true,
-            'description'       => 'Increase/decrease quantity in steps of X on the frontend.',
-            'value'             => '' !== $current && null !== $current ? $current : 1,
-            'wrapper_class'     => 'form-row form-row-last',
-            'custom_attributes' => [ 'min' => '1', 'step' => '1' ],
-        ]
-    );
-}, 10, 3 );
-
-add_action( 'woocommerce_save_product_variation', function ( $variation_id, $i ) {
-    if ( ! isset( $_POST['mpc_qty_step'][ $i ] ) ) { return; }
-    update_post_meta( $variation_id, '_mpc_qty_step', mpc_qty_step_sanitize( wc_clean( wp_unslash( $_POST['mpc_qty_step'][ $i ] ) ) ) );
-}, 10, 2 );
-
-// Frontend inputs carry both min and step so JS can normalize live typing.
+// Frontend and cart inputs carry both min and step so JS can normalize live typing.
 add_filter( 'woocommerce_quantity_input_args', function ( $args, $product ) {
     if ( ( is_admin() && ! wp_doing_ajax() ) || ! $product || ! is_a( $product, 'WC_Product' ) ) { return $args; }
 
-    $step = max( 1, mpc_qty_step_get_step( $product ) );
-    $min  = mpc_get_effective_min_quantity( $product );
+    $cart_item = mpc_get_cart_item_from_quantity_input_args( $args );
+    if ( $cart_item && mpc_is_bundled_cart_item( $cart_item ) ) { return $args; }
+
+    $step = max( 1, mpc_qty_step_get_step( $product, $cart_item ) );
+    $min  = mpc_get_effective_min_quantity( $product, $cart_item );
 
     $args['min_value']   = $min;
     $args['input_value'] = isset( $args['input_value'] ) && (int) $args['input_value'] >= $min ? $args['input_value'] : $min;
@@ -259,8 +164,8 @@ add_filter( 'woocommerce_quantity_input_args', function ( $args, $product ) {
     $args['custom_attributes']['data-mpc-step'] = (string) $step;
     $args['custom_attributes']['data-step']     = (string) $step;
     $args['custom_attributes']['data-qty-step'] = (string) $step;
+    $args['step']                               = (string) $step;
 
-    $args['step'] = (string) $step;
     return $args;
 }, 10, 2 );
 
@@ -294,7 +199,7 @@ add_action( 'woocommerce_after_cart_item_quantity_update', function ( $cart_item
     if ( ! $cart || ! is_a( $cart, 'WC_Cart' ) ) { return; }
 
     $item = $cart->get_cart_item( $cart_item_key );
-    if ( ! $item || empty( $item['data'] ) || ! is_a( $item['data'], 'WC_Product' ) ) { return; }
+    if ( ! $item || empty( $item['data'] ) || ! is_a( $item['data'], 'WC_Product' ) || mpc_is_bundled_cart_item( $item ) ) { return; }
 
     $adjusted = mpc_qty_step_normalize_qty( $quantity, mpc_qty_step_get_step( $item['data'], $item ), $item['data'], $item );
     if ( (int) $adjusted !== (int) $quantity ) {

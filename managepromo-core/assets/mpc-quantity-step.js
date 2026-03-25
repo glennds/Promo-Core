@@ -1,6 +1,6 @@
 (function () {
-    var DEBOUNCE_MS = 2000;
-    var QTY_SELECTOR = 'input.qty, input[name="quantity"], input[name^="quantity"], input[name="mpc_grouped_quantity"]';
+    var DEBOUNCE_MS = 1500;
+    var QTY_SELECTOR = 'input.qty, input[name="quantity"], input[name^="quantity"], input[name*="[qty]"]';
     var STEP_UP_SELECTOR = '.bde-quantity-button--inc, .plus, .qty-plus, [data-quantity-button="plus"], [data-quantity="plus"], [aria-label="Increase quantity"], [aria-label="increase quantity"]';
     var STEP_DOWN_SELECTOR = '.bde-quantity-button--dec, .minus, .qty-minus, [data-quantity-button="minus"], [data-quantity="minus"], [aria-label="Decrease quantity"], [aria-label="decrease quantity"]';
 
@@ -50,8 +50,8 @@
         return type !== "hidden" && (
             element.classList.contains("qty") ||
             name === "quantity" ||
-            name === "mpc_grouped_quantity" ||
             name.indexOf("quantity[") === 0 ||
+            (name.indexOf("cart[") === 0 && name.indexOf("[qty]") !== -1) ||
             name.indexOf("quantity") === 0
         );
     }
