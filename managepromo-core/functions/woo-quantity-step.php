@@ -260,7 +260,7 @@ add_filter( 'woocommerce_quantity_input_args', function ( $args, $product ) {
     $args['custom_attributes']['data-step']     = (string) $step;
     $args['custom_attributes']['data-qty-step'] = (string) $step;
 
-    if ( $step > 1 ) { $args['step'] = 'any'; }
+    $args['step'] = (string) $step;
     return $args;
 }, 10, 2 );
 

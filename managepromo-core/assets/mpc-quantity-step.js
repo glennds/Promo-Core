@@ -1,6 +1,8 @@
 (function () {
-    var DEBOUNCE_MS = 400;
+    var DEBOUNCE_MS = 2000;
     var QTY_SELECTOR = 'input.qty, input[name="quantity"], input[name^="quantity"], input[name="mpc_grouped_quantity"]';
+    var STEP_UP_SELECTOR = '.bde-quantity-button--inc, .plus, .qty-plus, [data-quantity-button="plus"], [data-quantity="plus"], [aria-label="Increase quantity"], [aria-label="increase quantity"]';
+    var STEP_DOWN_SELECTOR = '.bde-quantity-button--dec, .minus, .qty-minus, [data-quantity-button="minus"], [data-quantity="minus"], [aria-label="Decrease quantity"], [aria-label="decrease quantity"]';
 
     function toNumber(value) {
         var number = parseFloat(value);
@@ -15,7 +17,6 @@
 
     function resolveStep(input) {
         var step = (input.dataset && input.dataset.mpcStep) || input.getAttribute("data-mpc-step") || input.getAttribute("data-step") || input.getAttribute("data-qty-step") || input.getAttribute("step") || "1";
-        step = step === "any" ? "1" : step;
         step = toNumber(step);
         return isFinite(step) && step > 0 ? step : 1;
     }
@@ -64,13 +65,24 @@
         input.__mpcDebounceTimer = null;
     }
 
+    function setLastValue(input, value) {
+        if (isFinite(value)) {
+            input.setAttribute("data-mpc-last-value", String(value));
+        }
+    }
+
+    function getLastValue(input) {
+        var value = toNumber(input.getAttribute("data-mpc-last-value"));
+        return isFinite(value) ? value : toNumber(input.value);
+    }
+
     function syncStepAttribute(input) {
         var step = resolveStep(input);
 
         input.setAttribute("data-mpc-step", String(step));
         input.setAttribute("data-step", String(step));
         input.setAttribute("data-qty-step", String(step));
-        input.setAttribute("step", step > 1 ? "any" : "1");
+        input.setAttribute("step", String(step));
 
         if (input.step !== input.getAttribute("step")) {
             input.step = input.getAttribute("step");
@@ -118,6 +130,7 @@
 
         input.__mpcAdjusting = true;
         input.value = String(value);
+        setLastValue(input, value);
         input.dispatchEvent(new Event("input", { bubbles: true }));
         input.dispatchEvent(new Event("change", { bubbles: true }));
         input.__mpcAdjusting = false;
@@ -140,7 +153,9 @@
             return;
         }
 
-        setValue(input, normalizeValueNumber(toNumber(input.value), input));
+        var normalizedValue = normalizeValueNumber(toNumber(input.value), input);
+        setLastValue(input, normalizedValue);
+        setValue(input, normalizedValue);
     }
 
     // Debounce prevents partial typing like "1" -> "10" -> "100" from being corrected too early.
@@ -176,6 +191,36 @@
     function getFirstSteppedValue(min, step) {
         var firstValue = Math.ceil(min / step) * step;
         return firstValue < min ? min : firstValue;
+    }
+
+    function detectNativeStepDirection(event, input) {
+        var previousValue;
+        var currentValue;
+
+        if (resolveStep(input) <= 1) {
+            return null;
+        }
+
+        if (event && typeof event.inputType === "string" && (event.inputType.indexOf("insert") === 0 || event.inputType.indexOf("delete") === 0)) {
+            return null;
+        }
+
+        previousValue = getLastValue(input);
+        currentValue = toNumber(input.value);
+
+        if (!isFinite(previousValue) || !isFinite(currentValue)) {
+            return null;
+        }
+
+        if (currentValue > previousValue) {
+            return "up";
+        }
+
+        if (currentValue < previousValue) {
+            return "down";
+        }
+
+        return null;
     }
 
     function getSteppedButtonValue(input, direction) {
@@ -256,13 +301,14 @@
         }
 
         var normalizedValue = normalizeValueNumber(toNumber(input.value), input);
+        setLastValue(input, normalizedValue);
         if (String(normalizedValue) !== String(input.value)) {
             setValue(input, normalizedValue);
         }
     }
 
     document.addEventListener("click", function (event) {
-        var increaseButton = event.target.closest(".bde-quantity-button--inc");
+        var increaseButton = event.target.closest(STEP_UP_SELECTOR);
         var decreaseButton;
 
         if (increaseButton) {
@@ -273,7 +319,7 @@
             return;
         }
 
-        decreaseButton = event.target.closest(".bde-quantity-button--dec");
+        decreaseButton = event.target.closest(STEP_DOWN_SELECTOR);
         if (!decreaseButton) {
             return;
         }
@@ -285,9 +331,22 @@
     }, true);
 
     document.addEventListener("input", function (event) {
-        if (isQtyInput(event.target) && !event.target.__mpcAdjusting) {
-            scheduleNormalization(event.target);
+        var direction;
+        var previousValue;
+
+        if (!isQtyInput(event.target) || event.target.__mpcAdjusting) {
+            return;
         }
+
+        direction = detectNativeStepDirection(event, event.target);
+        if (!direction) {
+            scheduleNormalization(event.target);
+            return;
+        }
+
+        previousValue = getLastValue(event.target);
+        event.target.value = String(previousValue);
+        handleStepperClick(event.target, direction);
     });
 
     document.addEventListener("change", function (event) {
