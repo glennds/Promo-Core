@@ -1,10 +1,10 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) {exit;}
-if (!function_exists('managepromo_is_enabled') || !managepromo_is_enabled('disable_gutenberg')) {return;}
+defined('ABSPATH') || exit;
 
 //////////////////////////////////
 // Function contents start HERE //
 //////////////////////////////////
+
 
 
 // Disable the Gutenberg block editor requests

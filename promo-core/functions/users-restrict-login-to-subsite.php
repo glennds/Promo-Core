@@ -1,10 +1,10 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) {exit;}
-if (!function_exists('managepromo_is_enabled') || !managepromo_is_enabled('users_restrict_login_to_subsite')) {return;}
+defined('ABSPATH') || exit;
 
 //////////////////////////////////
 // Function contents start HERE //
 //////////////////////////////////
+
 
 
 function restrict_user_login_to_blog( $user, $username, $password ) {

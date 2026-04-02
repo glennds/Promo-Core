@@ -1,5 +1,11 @@
 <?php
-if (!defined('ABSPATH')) exit;
+defined('ABSPATH') || exit;
+
+/**
+ * Remove bulky Breakdance Builder access settings from user management screens
+ */
+
+
 
 add_action('admin_footer-user-new.php', function () {
     ?>

@@ -1,10 +1,10 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) {exit;}
-if (!function_exists('managepromo_is_enabled') || !managepromo_is_enabled('site_logo')) {return;}
+defined('ABSPATH') || exit;
 
 //////////////////////////////////
 // Function contents start HERE //
 //////////////////////////////////
+
 
 
 // Register setting

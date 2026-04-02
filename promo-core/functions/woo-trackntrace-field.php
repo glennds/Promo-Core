@@ -1,10 +1,11 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) { exit; }
-if ( ! function_exists( 'managepromo_is_enabled' ) || ! managepromo_is_enabled( 'woo_trackntrace_field' ) ) { return; }
+defined('ABSPATH') || exit;
 
 //////////////////////////////////
 // Function contents start HERE //
 //////////////////////////////////
+
+
 
 // Returns the public order meta key used by admin, REST API and webhooks.
 function mpc_trackntrace_meta_key(): string {

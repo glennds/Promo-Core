@@ -1,10 +1,10 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) { exit; }
-if ( ! function_exists( 'managepromo_is_enabled' ) || ! managepromo_is_enabled( 'network_supplier_orders' ) ) { return; }
+defined('ABSPATH') || exit;
 
 //////////////////////////////////
 // Function contents start HERE //
 //////////////////////////////////
+
 
 
 if ( ! defined( 'NSO_VERSION' ) ) {
@@ -12,7 +12,7 @@ if ( ! defined( 'NSO_VERSION' ) ) {
 }
 
 if ( ! defined( 'NSO_PLUGIN_FILE' ) ) {
-    define( 'NSO_PLUGIN_FILE', dirname( __FILE__, 2 ) . '/managepromo-core.php' );
+    define( 'NSO_PLUGIN_FILE', dirname( __FILE__, 2 ) . '/promo-core.php' );
 }
 
 if ( ! defined( 'NSO_PLUGIN_DIR' ) ) {

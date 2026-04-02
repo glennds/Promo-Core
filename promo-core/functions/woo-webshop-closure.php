@@ -1,6 +1,5 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) {exit;}
-if (!function_exists('managepromo_is_enabled') || !managepromo_is_enabled('woo_webshop_closure')) {return;}
+defined('ABSPATH') || exit;
 
 //////////////////////////////////
 // Function contents start HERE //

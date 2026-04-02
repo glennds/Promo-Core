@@ -1,29 +1,34 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) { exit; }
-if ( ! function_exists( 'managepromo_is_enabled' ) || ! managepromo_is_enabled( 'woo_min_order_amount' ) ) { return; }
+defined('ABSPATH') || exit;
 
-function mpc_min_order_amount_sanitize( $raw ): int {
+//////////////////////////////////
+// Function contents start HERE //
+//////////////////////////////////
+
+
+
+function ds_min_order_amount_sanitize( $raw ): int {
     $value = absint( $raw );
     return $value > 0 ? $value : 1;
 }
 
-function mpc_min_order_amount_get( $product ): int {
+function ds_min_order_amount_get( $product ): int {
     if ( is_numeric( $product ) ) { $product = wc_get_product( (int) $product ); }
     if ( ! $product || ! is_a( $product, 'WC_Product' ) ) { return 1; }
 
     if ( $product->is_type( 'variation' ) ) {
         $parent_id = $product->get_parent_id();
         if ( $parent_id > 0 ) {
-            return mpc_min_order_amount_sanitize( get_post_meta( $parent_id, 'min_order_amount', true ) );
+            return ds_min_order_amount_sanitize( get_post_meta( $parent_id, 'min_order_amount', true ) );
         }
     }
 
-    return mpc_min_order_amount_sanitize( get_post_meta( $product->get_id(), 'min_order_amount', true ) );
+    return ds_min_order_amount_sanitize( get_post_meta( $product->get_id(), 'min_order_amount', true ) );
 }
 
-if ( ! function_exists( 'mpc_print_product_type_visibility_script' ) ) {
+if ( ! function_exists( 'ds_print_product_type_visibility_script' ) ) {
     // WooCommerce does not always reveal custom fields reliably for extension product types.
-    function mpc_print_product_type_visibility_script() {
+    function ds_print_product_type_visibility_script() {
         if ( ! is_admin() ) { return; }
 
         $screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
@@ -47,12 +52,12 @@ if ( ! function_exists( 'mpc_print_product_type_visibility_script' ) ) {
         <?php
     }
 
-    add_action( 'admin_footer', 'mpc_print_product_type_visibility_script', 50 );
+    add_action( 'admin_footer', 'ds_print_product_type_visibility_script', 50 );
 }
 
-if ( ! function_exists( 'mpc_is_bundled_cart_item' ) ) {
+if ( ! function_exists( 'ds_is_bundled_cart_item' ) ) {
     // Product Bundles identifies child cart items with the `bundled_by` relationship field.
-    function mpc_is_bundled_cart_item( array $cart_item ): bool {
+    function ds_is_bundled_cart_item( array $cart_item ): bool {
         if ( function_exists( 'wc_pb_is_bundled_cart_item' ) ) {
             return wc_pb_is_bundled_cart_item( $cart_item, WC()->cart ? WC()->cart->get_cart() : false );
         }
@@ -61,9 +66,9 @@ if ( ! function_exists( 'mpc_is_bundled_cart_item' ) ) {
     }
 }
 
-if ( ! function_exists( 'mpc_get_cart_item_from_quantity_input_args' ) ) {
+if ( ! function_exists( 'ds_get_cart_item_from_quantity_input_args' ) ) {
     // Cart quantity inputs expose the cart item key in their input name.
-    function mpc_get_cart_item_from_quantity_input_args( array $args ): array {
+    function ds_get_cart_item_from_quantity_input_args( array $args ): array {
         if ( empty( $args['input_name'] ) || ! is_string( $args['input_name'] ) || ! WC()->cart ) { return []; }
         if ( ! preg_match( '/^cart\[([^\]]+)\]\[qty\]$/', $args['input_name'], $matches ) ) { return []; }
 
@@ -72,8 +77,8 @@ if ( ! function_exists( 'mpc_get_cart_item_from_quantity_input_args' ) ) {
     }
 }
 
-if ( ! function_exists( 'mpc_get_builtin_min_purchase_quantity' ) ) {
-    function mpc_get_builtin_min_purchase_quantity( $product ): int {
+if ( ! function_exists( 'ds_get_builtin_min_purchase_quantity' ) ) {
+    function ds_get_builtin_min_purchase_quantity( $product ): int {
         if ( is_numeric( $product ) ) { $product = wc_get_product( (int) $product ); }
         if ( ! $product || ! is_a( $product, 'WC_Product' ) ) { return 1; }
 
@@ -82,21 +87,21 @@ if ( ! function_exists( 'mpc_get_builtin_min_purchase_quantity' ) ) {
     }
 }
 
-if ( ! function_exists( 'mpc_get_effective_min_quantity' ) ) {
-    function mpc_get_effective_min_quantity( $product, array $cart_item = [] ): int {
-        if ( ! empty( $cart_item ) && mpc_is_bundled_cart_item( $cart_item ) ) { return 1; }
+if ( ! function_exists( 'ds_get_effective_min_quantity' ) ) {
+    function ds_get_effective_min_quantity( $product, array $cart_item = [] ): int {
+        if ( ! empty( $cart_item ) && ds_is_bundled_cart_item( $cart_item ) ) { return 1; }
 
         if ( is_numeric( $product ) ) { $product = wc_get_product( (int) $product ); }
         if ( ! $product || ! is_a( $product, 'WC_Product' ) ) { return 1; }
 
-        $min = max( mpc_get_builtin_min_purchase_quantity( $product ), mpc_min_order_amount_get( $product ) );
+        $min = max( ds_get_builtin_min_purchase_quantity( $product ), ds_min_order_amount_get( $product ) );
         return $min > 0 ? $min : 1;
     }
 }
 
-function mpc_min_order_amount_normalize_qty( $qty, $product, array $cart_item = [] ): int {
+function ds_min_order_amount_normalize_qty( $qty, $product, array $cart_item = [] ): int {
     $qty = max( 0, (int) wc_stock_amount( $qty ) );
-    return max( mpc_get_effective_min_quantity( $product, $cart_item ), $qty );
+    return max( ds_get_effective_min_quantity( $product, $cart_item ), $qty );
 }
 
 // Admin field: use the Inventory tab for simple, variable and bundle products.
@@ -123,17 +128,17 @@ add_action( 'woocommerce_product_options_inventory_product_data', function () {
 add_action( 'woocommerce_admin_process_product_object', function ( $product ) {
     if ( ! $product || ! is_a( $product, 'WC_Product' ) || ! isset( $_POST['min_order_amount'] ) ) { return; }
     $raw = wc_clean( wp_unslash( $_POST['min_order_amount'] ) );
-    $product->update_meta_data( 'min_order_amount', mpc_min_order_amount_sanitize( $raw ) );
+    $product->update_meta_data( 'min_order_amount', ds_min_order_amount_sanitize( $raw ) );
 } );
 
 // Frontend inputs always get the effective minimum, including variation refreshes.
 add_filter( 'woocommerce_quantity_input_args', function ( array $args, $product ) {
     if ( ( is_admin() && ! wp_doing_ajax() ) || ! $product || ! is_a( $product, 'WC_Product' ) ) { return $args; }
 
-    $cart_item = mpc_get_cart_item_from_quantity_input_args( $args );
-    if ( $cart_item && mpc_is_bundled_cart_item( $cart_item ) ) { return $args; }
+    $cart_item = ds_get_cart_item_from_quantity_input_args( $args );
+    if ( $cart_item && ds_is_bundled_cart_item( $cart_item ) ) { return $args; }
 
-    $min                 = mpc_get_effective_min_quantity( $product, $cart_item );
+    $min                 = ds_get_effective_min_quantity( $product, $cart_item );
     $args['min_value']   = $min;
     $args['input_value'] = isset( $args['input_value'] ) && (int) $args['input_value'] >= $min ? $args['input_value'] : $min;
 
@@ -144,56 +149,55 @@ add_filter( 'woocommerce_quantity_input_args', function ( array $args, $product 
 }, 10, 2 );
 
 add_filter( 'woocommerce_available_variation', function ( $data, $product, $variation ) {
-    $data['min_qty'] = mpc_get_effective_min_quantity( $variation );
+    $data['min_qty'] = ds_get_effective_min_quantity( $variation );
     return $data;
 }, 10, 3 );
 
-if ( ! function_exists( 'mpc_qty_step_is_enabled' ) || ! mpc_qty_step_is_enabled() ) {
-    // When quantity-step is off, minimum quantity still needs to be enforced server-side.
-    add_filter( 'woocommerce_add_to_cart_validation', function ( $passed, $product_id, $quantity, $variation_id = 0 ) {
-        $product = wc_get_product( $variation_id ? $variation_id : $product_id );
-        if ( ! $product ) { return $passed; }
 
-        $adjusted = mpc_min_order_amount_normalize_qty( $quantity, $product );
-        if ( (int) $adjusted !== (int) $quantity ) {
-            if ( isset( $_REQUEST['quantity'] ) && ! is_array( $_REQUEST['quantity'] ) ) { $_REQUEST['quantity'] = $adjusted; }
-            if ( isset( $_POST['quantity'] ) && ! is_array( $_POST['quantity'] ) ) { $_POST['quantity'] = $adjusted; }
-            wc_add_notice( sprintf( 'Hoeveelheid aangepast naar %d vanwege de minimale bestelhoeveelheid.', $adjusted ), 'notice' );
-        }
+// When quantity-step is off, minimum quantity still needs to be enforced server-side.
+add_filter( 'woocommerce_add_to_cart_validation', function ( $passed, $product_id, $quantity, $variation_id = 0 ) {
+    $product = wc_get_product( $variation_id ? $variation_id : $product_id );
+    if ( ! $product ) { return $passed; }
 
-        return $passed;
-    }, 10, 4 );
+    $adjusted = ds_min_order_amount_normalize_qty( $quantity, $product );
+    if ( (int) $adjusted !== (int) $quantity ) {
+        if ( isset( $_REQUEST['quantity'] ) && ! is_array( $_REQUEST['quantity'] ) ) { $_REQUEST['quantity'] = $adjusted; }
+        if ( isset( $_POST['quantity'] ) && ! is_array( $_POST['quantity'] ) ) { $_POST['quantity'] = $adjusted; }
+        wc_add_notice( sprintf( 'Hoeveelheid aangepast naar %d vanwege de minimale bestelhoeveelheid.', $adjusted ), 'notice' );
+    }
 
-    add_filter( 'woocommerce_add_to_cart_quantity', function ( $qty, $product_id ) {
-        $variation_id = isset( $_REQUEST['variation_id'] ) ? absint( wp_unslash( $_REQUEST['variation_id'] ) ) : 0;
-        $product      = wc_get_product( $variation_id ? $variation_id : $product_id );
-        return $product ? mpc_min_order_amount_normalize_qty( $qty, $product ) : $qty;
-    }, 10, 2 );
+    return $passed;
+}, 10, 4 );
 
-    add_action( 'woocommerce_after_cart_item_quantity_update', function ( $cart_item_key, $quantity, $old_quantity, $cart ) {
-        if ( ! $cart || ! is_a( $cart, 'WC_Cart' ) ) { return; }
+add_filter( 'woocommerce_add_to_cart_quantity', function ( $qty, $product_id ) {
+    $variation_id = isset( $_REQUEST['variation_id'] ) ? absint( wp_unslash( $_REQUEST['variation_id'] ) ) : 0;
+    $product      = wc_get_product( $variation_id ? $variation_id : $product_id );
+    return $product ? ds_min_order_amount_normalize_qty( $qty, $product ) : $qty;
+}, 10, 2 );
 
-        $item = $cart->get_cart_item( $cart_item_key );
-        if ( ! $item || empty( $item['data'] ) || ! is_a( $item['data'], 'WC_Product' ) || mpc_is_bundled_cart_item( $item ) ) { return; }
+add_action( 'woocommerce_after_cart_item_quantity_update', function ( $cart_item_key, $quantity, $old_quantity, $cart ) {
+    if ( ! $cart || ! is_a( $cart, 'WC_Cart' ) ) { return; }
 
-        $adjusted = mpc_min_order_amount_normalize_qty( $quantity, $item['data'], $item );
-        if ( (int) $adjusted !== (int) $quantity ) {
-            $cart->set_quantity( $cart_item_key, $adjusted, true );
-            wc_add_notice( sprintf( 'Hoeveelheid aangepast naar %d vanwege de minimale bestelhoeveelheid.', $adjusted ), 'notice' );
-        }
-    }, 10, 4 );
-}
+    $item = $cart->get_cart_item( $cart_item_key );
+    if ( ! $item || empty( $item['data'] ) || ! is_a( $item['data'], 'WC_Product' ) || ds_is_bundled_cart_item( $item ) ) { return; }
+
+    $adjusted = ds_min_order_amount_normalize_qty( $quantity, $item['data'], $item );
+    if ( (int) $adjusted !== (int) $quantity ) {
+        $cart->set_quantity( $cart_item_key, $adjusted, true );
+        wc_add_notice( sprintf( 'Hoeveelheid aangepast naar %d vanwege de minimale bestelhoeveelheid.', $adjusted ), 'notice' );
+    }
+}, 10, 4 );
 
 add_action( 'woocommerce_after_checkout_validation', function ( $data, $errors ) {
     if ( ! WC()->cart ) { return; }
 
     foreach ( WC()->cart->get_cart() as $cart_item ) {
-        if ( mpc_is_bundled_cart_item( $cart_item ) ) { continue; }
+        if ( ds_is_bundled_cart_item( $cart_item ) ) { continue; }
 
         $product = isset( $cart_item['data'] ) ? $cart_item['data'] : null;
         if ( ! $product || ! is_a( $product, 'WC_Product' ) ) { continue; }
 
-        $min = mpc_get_effective_min_quantity( $product, $cart_item );
+        $min = ds_get_effective_min_quantity( $product, $cart_item );
         $qty = isset( $cart_item['quantity'] ) ? (int) $cart_item['quantity'] : 0;
 
         if ( $qty < $min ) {

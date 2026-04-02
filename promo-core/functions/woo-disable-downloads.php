@@ -1,10 +1,10 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) {exit;}
-if (!function_exists('managepromo_is_enabled') || !managepromo_is_enabled('woo_disable_downloads')) {return;}
+defined('ABSPATH') || exit;
 
 //////////////////////////////////
 // Function contents start HERE //
 //////////////////////////////////
+
 
 
 add_action( 'admin_head', 'dnz_hide_downloadable_option_in_admin' );

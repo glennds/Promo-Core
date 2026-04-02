@@ -1,9 +1,12 @@
 <?php
+defined('ABSPATH') || exit;
+
 /**
  * Ensure WooCommerce activation steps run after NS Cloner creates a site.
  * File: wp-content/mu-plugins/nscloner-wc-post-activate.php
  */
-if (!defined('ABSPATH')) exit;
+
+
 
 add_action('ns_cloner_after_clone', 'ds_run_wc_activation_on_cloned_site', 20);
 add_action('ns_cloner_site_created', 'ds_run_wc_activation_on_cloned_site', 20); // fallback if your NS Cloner fires this

@@ -1,6 +1,5 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) {exit;}
-if (!function_exists('managepromo_is_enabled') || !managepromo_is_enabled('users_bulkgen_exportimport')) {return;}
+defined('ABSPATH') || exit;
 
 //////////////////////////////////
 // Function contents start HERE //
@@ -10,20 +9,21 @@ if (!function_exists('managepromo_is_enabled') || !managepromo_is_enabled('users
 
 /**
  * -----------------------------------------------------------------------------
- * managepromo User Batch &#65533; Single page (Users &#8594; Bulk management)
+ * Promo Core User Batch &#65533; Single page (Users &#8594; Bulk management)
  * - Generate random users
  * - Export current site's users (CSV)
  * - Import users (update by username; optional create)
  * -----------------------------------------------------------------------------
  */
 
-class managepromo_User_Batch {
-    const DUMMY_DOMAIN    = 'dummy.managepromo.com';
+class promocore_User_Batch {
+    const DUMMY_DOMAIN    = 'dummy.promotie.nl';
     const META_PLAIN_PW   = 'ds_plain_password';
     const NONCE_GEN       = 'ds_gen_nonce';
     const NONCE_EXP       = 'ds_exp_nonce';
     const META_IDENTIFIER = 'ds_identifier';
     const META_WALLET     = 'ds_wallet_balance';
+    const PAGE_CAPABILITY = 'list_users';
 
     /** Network Users: add "Identifier" column header */
     public function add_identifier_column_network( $cols ) {
@@ -42,6 +42,7 @@ class managepromo_User_Batch {
     public function __construct() {
         // Network Admin &#8594; Users (all sites)
 
+        add_action( 'init',                               [ $this, 'redirect_legacy_bulk_page_url' ] );
         add_action( 'admin_enqueue_scripts',              [ $this, 'enqueue_admin_assets' ] );
         add_action( 'admin_head-user-new.php',            [ $this, 'hide_email_fields' ] );
         add_action( 'admin_init',                         [ $this, 'alter_user_new_submission' ] );
@@ -51,7 +52,6 @@ class managepromo_User_Batch {
         add_filter( 'wp_send_new_user_notification_to_user',  '__return_false' );
         add_filter( 'send_password_change_email',              '__return_false' );
         add_filter( 'send_email_change_email',                 '__return_false' );
-        add_filter( 'allow_password_reset',                   [ $this, 'deny_password_reset' ], 10, 2 );
         add_filter( 'pre_wp_mail',                            [ $this, 'block_user_mail_to_dummy' ], 10, 2 );
 
         add_filter( 'woocommerce_account_menu_items',         [ $this, 'wc_hide_account_items' ] );
@@ -78,6 +78,31 @@ class managepromo_User_Batch {
 
     private static function is_subsite(): bool {
         return is_multisite() && ! is_network_admin();
+    }
+
+    private static function can_access_bulk_tools(): bool {
+        return current_user_can( 'manage_options' )
+            || current_user_can( 'create_users' )
+            || current_user_can( 'promote_users' )
+            || current_user_can( self::PAGE_CAPABILITY );
+    }
+
+    public function redirect_legacy_bulk_page_url() {
+        if ( ! self::is_subsite() ) return;
+        if ( ! is_user_logged_in() || ! self::can_access_bulk_tools() ) return;
+        if ( empty( $_SERVER['REQUEST_URI'] ) ) return;
+
+        $request_path = wp_parse_url( (string) wp_unslash( $_SERVER['REQUEST_URI'] ), PHP_URL_PATH );
+        $admin_path   = wp_parse_url( admin_url(), PHP_URL_PATH );
+
+        if ( ! is_string( $request_path ) || ! is_string( $admin_path ) ) return;
+
+        $legacy_path = untrailingslashit( $admin_path ) . '/bulk-user-management';
+
+        if ( untrailingslashit( $request_path ) !== untrailingslashit( $legacy_path ) ) return;
+
+        wp_safe_redirect( admin_url( 'admin.php?page=bulk-user-management' ), 301 );
+        exit;
     }
 
     public function enqueue_admin_assets( $hook ) {
@@ -256,7 +281,7 @@ class managepromo_User_Batch {
         }
 
         add_action( 'user_register', function( $user_id ) use ( $p ) {
-            if ( $p ) update_user_meta( $user_id, managepromo_User_Batch::META_PLAIN_PW, $p );
+            if ( $p ) update_user_meta( $user_id, promocore_User_Batch::META_PLAIN_PW, $p );
         } );
     }
 
@@ -264,11 +289,6 @@ class managepromo_User_Batch {
         if ( $update ) return;
         if ( empty( $user->user_login ) ) return;
         $user->user_email = $user->user_login . '@' . self::DUMMY_DOMAIN;
-    }
-
-    public function deny_password_reset( $allow, $user_id ) {
-        if ( user_can( $user_id, 'manage_options' ) ) return true;
-        return false;
     }
 
     public function block_user_mail_to_dummy( $short_circuit, $atts ) {
@@ -297,17 +317,24 @@ class managepromo_User_Batch {
     public function add_adminpage() {
         if ( ! self::is_subsite() ) return;
         add_submenu_page(
-            'managepromo',
+            'promocore',
             'Bulk user management',
             'Bulk users',
-            'manage_options',
+            self::PAGE_CAPABILITY,
+            'bulk-user-management',
+            [ $this, 'render_bulk_page' ]
+        );
+        add_users_page(
+            'Bulk user management',
+            'Bulk users',
+            self::PAGE_CAPABILITY,
             'bulk-user-management',
             [ $this, 'render_bulk_page' ]
         );
     }
 
     public function render_bulk_page() {
-        if ( ! current_user_can( 'manage_options' ) ) { wp_die( 'Geen rechten.' ); }
+        if ( ! self::can_access_bulk_tools() ) { wp_die( 'Geen rechten.' ); }
 
         // Handle Import on the same page
         $report = null;
@@ -479,7 +506,7 @@ class managepromo_User_Batch {
     /* ---------------------- Actions (Generate / Export) --------------------- */
 
     public function handle_bulk_generate() {
-        if ( ! current_user_can( 'create_users' ) ) wp_die( 'Geen rechten.' );
+        if ( ! self::can_access_bulk_tools() ) wp_die( 'Geen rechten.' );
         check_admin_referer( self::NONCE_GEN );
 
         $qty  = max( 1, min( 5000, intval( $_POST['ds_qty'] ?? 0 ) ) );
@@ -574,7 +601,7 @@ class managepromo_User_Batch {
     }
 
     public function handle_export_csv_site() {
-        if ( ! current_user_can( 'list_users' ) ) wp_die( __( 'You do not have permission.', 'ds' ) );
+        if ( ! self::can_access_bulk_tools() ) wp_die( __( 'You do not have permission.', 'ds' ) );
         check_admin_referer( 'ds_bulk_export_site' );
 
         $role = sanitize_key( $_POST['ds_role'] ?? '__all' );
@@ -642,7 +669,7 @@ class managepromo_User_Batch {
         fclose( $out );
     }
 }
-new managepromo_User_Batch();
+new promocore_User_Batch();
 
 /* -----------------------------------------------------------------------------
  * Constants / helpers used outside the class
@@ -689,8 +716,8 @@ function ds_write_csv_header( $out ) {
 function ds_stream_users_for_current_blog( $out, $blog_id, $role = '__all' ) {
     $has_wc = function_exists( 'wc_get_orders' );
 
-    $pw_meta_key = ( class_exists( 'managepromo_User_Batch' ) )
-        ? managepromo_User_Batch::META_PLAIN_PW
+    $pw_meta_key = ( class_exists( 'promocore_User_Batch' ) )
+        ? promocore_User_Batch::META_PLAIN_PW
         : 'ds_plain_password';
 
     $args = [
@@ -983,7 +1010,7 @@ function ds_import_update_users_from_csv() {
             continue;
         }
 
-        $fallback_domain = class_exists( 'managepromo_User_Batch' ) ? managepromo_User_Batch::DUMMY_DOMAIN : 'example.invalid';
+        $fallback_domain = class_exists( 'promocore_User_Batch' ) ? promocore_User_Batch::DUMMY_DOMAIN : 'example.invalid';
 
         // Email is optional for creation; use safe fallback when empty/invalid.
         if ( ! $email_valid ) {

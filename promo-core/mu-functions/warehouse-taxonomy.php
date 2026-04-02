@@ -1,19 +1,19 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) { exit; }
-if ( ! function_exists( 'managepromo_is_enabled' ) || ! managepromo_is_enabled( 'supplier_taxonomy_standalone' ) ) { return; }
+defined('ABSPATH') || exit;
 
 //////////////////////////////////
 // Function contents start HERE //
 //////////////////////////////////
 
 
-if ( ! class_exists( 'Supplier_Standalone' ) ) {
-    final class Supplier_Standalone {
 
-        const TAXONOMY   = 'supplier';
-        const META_EMAIL = 'mcisoe_supplier_email';
-        const META_CUSTOM_TEXT = 'mcisoe_supplier_custom_text';
-        const META_DATA_TEXT   = 'mcisoe_supplier_data_text';
+if ( ! class_exists( 'Warehouse_Taxonomy' ) ) {
+    final class Warehouse_Taxonomy {
+
+        const TAXONOMY   = 'warehouse';
+        const META_EMAIL = 'mcisoe_warehouse_email';
+        const META_CUSTOM_TEXT = 'mcisoe_warehouse_custom_text';
+        const META_DATA_TEXT   = 'mcisoe_warehouse_data_text';
 
         private static $instance = null;
 
@@ -29,7 +29,7 @@ if ( ! class_exists( 'Supplier_Standalone' ) ) {
             // Ensure the taxonomy is available on products (same slug/labels as the legacy plugin).
             add_action( 'init', [ $this, 'register_taxonomy' ], 11 );
 
-            // Admin fields for supplier meta.
+            // Admin fields for warehouse meta.
             add_action( self::TAXONOMY . '_add_form_fields', [ $this, 'render_add_fields' ] );
             add_action( self::TAXONOMY . '_edit_form_fields', [ $this, 'render_edit_fields' ] );
             add_action( 'created_' . self::TAXONOMY, [ $this, 'save_meta_fields' ] );
@@ -40,35 +40,35 @@ if ( ! class_exists( 'Supplier_Standalone' ) ) {
             add_filter( 'manage_edit-' . self::TAXONOMY . '_columns', [ $this, 'register_columns' ] );
             add_filter( 'manage_' . self::TAXONOMY . '_custom_column', [ $this, 'render_column' ], 10, 3 );
 
-            // Product list filtering by supplier in wp-admin.
-            add_action( 'restrict_manage_posts', [ $this, 'add_supplier_filter_dropdown' ] );
-            add_filter( 'parse_query', [ $this, 'apply_supplier_filter_query' ] );
+            // Product list filtering by warehouse in wp-admin.
+            add_action( 'restrict_manage_posts', [ $this, 'add_warehouse_filter_dropdown' ] );
+            add_filter( 'parse_query', [ $this, 'apply_warehouse_filter_query' ] );
         }
 
         public function register_taxonomy() {
             $labels = [
-                'name'                       => __( 'Suppliers', 'supplier-standalone' ),
-                'singular_name'              => __( 'Supplier', 'supplier-standalone' ),
-                'menu_name'                  => __( 'Suppliers', 'supplier-standalone' ),
-                'all_items'                  => __( 'All Suppliers', 'supplier-standalone' ),
-                'parent_item'                => __( 'Parent Supplier', 'supplier-standalone' ),
-                'parent_item_colon'          => __( 'Parent Supplier:', 'supplier-standalone' ),
-                'new_item_name'              => __( 'Name of new Supplier', 'supplier-standalone' ),
-                'add_new_item'               => __( 'New Supplier', 'supplier-standalone' ),
-                'edit_item'                  => __( 'Edit Supplier', 'supplier-standalone' ),
-                'update_item'                => __( 'Update Supplier', 'supplier-standalone' ),
-                'view_item'                  => __( 'View Supplier', 'supplier-standalone' ),
-                'separate_items_with_commas' => __( 'Separate suppliers with commas', 'supplier-standalone' ),
-                'search_items'               => __( 'Search Suppliers', 'supplier-standalone' ),
-                'add_or_remove_items'        => __( 'Add or remove suppliers', 'supplier-standalone' ),
-                'choose_from_most_used'      => __( 'Choose from the most used suppliers', 'supplier-standalone' ),
-                'not_found'                  => __( 'No suppliers found', 'supplier-standalone' ),
+                'name'                       => __( 'Warehouses', 'warehouse-standalone' ),
+                'singular_name'              => __( 'Warehouse', 'warehouse-standalone' ),
+                'menu_name'                  => __( 'Warehouses', 'warehouse-standalone' ),
+                'all_items'                  => __( 'All Warehouses', 'warehouse-standalone' ),
+                'parent_item'                => __( 'Parent Warehouse', 'warehouse-standalone' ),
+                'parent_item_colon'          => __( 'Parent Warehouse:', 'warehouse-standalone' ),
+                'new_item_name'              => __( 'Name of new Warehouse', 'warehouse-standalone' ),
+                'add_new_item'               => __( 'New Warehouse', 'warehouse-standalone' ),
+                'edit_item'                  => __( 'Edit Warehouse', 'warehouse-standalone' ),
+                'update_item'                => __( 'Update Warehouse', 'warehouse-standalone' ),
+                'view_item'                  => __( 'View Warehouse', 'warehouse-standalone' ),
+                'separate_items_with_commas' => __( 'Separate warehouses with commas', 'warehouse-standalone' ),
+                'search_items'               => __( 'Search Warehouses', 'warehouse-standalone' ),
+                'add_or_remove_items'        => __( 'Add or remove warehouses', 'warehouse-standalone' ),
+                'choose_from_most_used'      => __( 'Choose from the most used warehouses', 'warehouse-standalone' ),
+                'not_found'                  => __( 'No warehouses found', 'warehouse-standalone' ),
             ];
 
             $args = [
                 'labels'            => $labels,
                 'hierarchical'      => true,
-                'rewrite'           => [ 'slug' => 'supplier', 'with_front' => false ],
+                'rewrite'           => [ 'slug' => 'warehouse', 'with_front' => false ],
                 'public'            => true,
                 'show_ui'           => true,
                 'show_admin_column' => true,
@@ -89,11 +89,11 @@ if ( ! class_exists( 'Supplier_Standalone' ) ) {
         public function render_add_fields() {
             ?>
             <div class="form-field term-email-wrap">
-                <label for="mcisoe_supplier_email"><?php esc_html_e( 'Supplier Email', 'supplier-standalone' ); ?></label>
-                <input type="email" name="<?php echo esc_attr( self::META_EMAIL ); ?>" id="mcisoe_supplier_email" value="" required />
-                <p class="description"><?php esc_html_e( 'Email address of the supplier.', 'supplier-standalone' ); ?></p>
+                <label for="mcisoe_warehouse_email"><?php esc_html_e( 'Warehouse Email', 'warehouse-standalone' ); ?></label>
+                <input type="email" name="<?php echo esc_attr( self::META_EMAIL ); ?>" id="mcisoe_warehouse_email" value="" required />
+                <p class="description"><?php esc_html_e( 'Email address of the warehouse.', 'warehouse-standalone' ); ?></p>
             </div>
-            <?php wp_nonce_field( 'supplier_standalone_meta', 'supplier_standalone_meta' ); ?>
+            <?php wp_nonce_field( 'warehouse_standalone_meta', 'warehouse_standalone_meta' ); ?>
             <?php
         }
 
@@ -101,24 +101,24 @@ if ( ! class_exists( 'Supplier_Standalone' ) ) {
             $email       = get_term_meta( $term->term_id, self::META_EMAIL, true );
             ?>
             <tr class="form-field term-email-wrap">
-                <th scope="row"><label for="mcisoe_supplier_email"><?php esc_html_e( 'Supplier Email', 'supplier-standalone' ); ?></label></th>
+                <th scope="row"><label for="mcisoe_warehouse_email"><?php esc_html_e( 'Warehouse Email', 'warehouse-standalone' ); ?></label></th>
                 <td>
-                    <input type="email" name="<?php echo esc_attr( self::META_EMAIL ); ?>" id="mcisoe_supplier_email" value="<?php echo esc_attr( $email ); ?>" required />
-                    <p class="description"><?php esc_html_e( 'Email address of the supplier.', 'supplier-standalone' ); ?></p>
+                    <input type="email" name="<?php echo esc_attr( self::META_EMAIL ); ?>" id="mcisoe_warehouse_email" value="<?php echo esc_attr( $email ); ?>" required />
+                    <p class="description"><?php esc_html_e( 'Email address of the warehouse.', 'warehouse-standalone' ); ?></p>
                 </td>
             </tr>
-            <?php wp_nonce_field( 'supplier_standalone_meta', 'supplier_standalone_meta' ); ?>
+            <?php wp_nonce_field( 'warehouse_standalone_meta', 'warehouse_standalone_meta' ); ?>
             <?php
         }
 
         public function save_meta_fields( $term_id ) {
-            if ( ! isset( $_POST['supplier_standalone_meta'] ) ) {
+            if ( ! isset( $_POST['warehouse_standalone_meta'] ) ) {
                 return;
             }
 
-            $nonce = sanitize_text_field( wp_unslash( $_POST['supplier_standalone_meta'] ) );
+            $nonce = sanitize_text_field( wp_unslash( $_POST['warehouse_standalone_meta'] ) );
 
-            if ( ! wp_verify_nonce( $nonce, 'supplier_standalone_meta' ) ) {
+            if ( ! wp_verify_nonce( $nonce, 'warehouse_standalone_meta' ) ) {
                 return;
             }
 
@@ -143,8 +143,8 @@ if ( ! class_exists( 'Supplier_Standalone' ) ) {
         public function register_columns( $columns ) {
             $new_columns = [
                 'cb'             => isset( $columns['cb'] ) ? $columns['cb'] : '',
-                'name'           => __( 'Name', 'supplier-standalone' ),
-                'supplier_email' => __( 'Supplier Email', 'supplier-standalone' ),
+                'name'           => __( 'Name', 'warehouse-standalone' ),
+                'warehouse_email' => __( 'Warehouse Email', 'warehouse-standalone' ),
             ];
 
             return $new_columns;
@@ -152,7 +152,7 @@ if ( ! class_exists( 'Supplier_Standalone' ) ) {
 
         public function render_column( $content, $column, $term_id ) {
             switch ( $column ) {
-                case 'supplier_email':
+                case 'warehouse_email':
                     $content = get_term_meta( $term_id, self::META_EMAIL, true );
                     break;
                 default:
@@ -184,7 +184,7 @@ if ( ! class_exists( 'Supplier_Standalone' ) ) {
             wp_add_inline_style( 'common', $css );
         }
 
-        public function add_supplier_filter_dropdown() {
+        public function add_warehouse_filter_dropdown() {
             global $typenow;
 
             if ( 'product' !== $typenow || ! taxonomy_exists( self::TAXONOMY ) ) {
@@ -193,7 +193,7 @@ if ( ! class_exists( 'Supplier_Standalone' ) ) {
 
             $taxonomy     = get_taxonomy( self::TAXONOMY );
             $selected     = isset( $_GET[ self::TAXONOMY ] ) ? sanitize_text_field( wp_unslash( $_GET[ self::TAXONOMY ] ) ) : '';
-            $placeholder  = sprintf( __( 'All %s', 'supplier-standalone' ), $taxonomy->labels->name );
+            $placeholder  = sprintf( __( 'All %s', 'warehouse-standalone' ), $taxonomy->labels->name );
 
             wp_dropdown_categories(
                 [
@@ -209,7 +209,7 @@ if ( ! class_exists( 'Supplier_Standalone' ) ) {
             );
         }
 
-        public function apply_supplier_filter_query( $query ) {
+        public function apply_warehouse_filter_query( $query ) {
             global $pagenow;
 
             if ( 'edit.php' !== $pagenow || ! is_admin() ) {
@@ -229,20 +229,20 @@ if ( ! class_exists( 'Supplier_Standalone' ) ) {
     }
 }
 
-Supplier_Standalone::instance();
+Warehouse_Taxonomy::instance();
 
 /**
- * Helper to fetch supplier meta in one call using legacy keys.
+ * Helper to fetch warehouse meta in one call using legacy keys.
  *
- * @param int $term_id Supplier term ID.
+ * @param int $term_id Warehouse term ID.
  * @return array
  */
-if ( ! function_exists( 'supplier_standalone_get_supplier_meta' ) ) {
-    function supplier_standalone_get_supplier_meta( $term_id ) {
+if ( ! function_exists( 'warehouse_standalone_get_warehouse_meta' ) ) {
+    function warehouse_standalone_get_warehouse_meta( $term_id ) {
         return [
-            'email'       => get_term_meta( $term_id, Supplier_Standalone::META_EMAIL, true ),
-            'custom_text' => get_term_meta( $term_id, Supplier_Standalone::META_CUSTOM_TEXT, true ),
-            'data_text'   => get_term_meta( $term_id, Supplier_Standalone::META_DATA_TEXT, true ),
+            'email'       => get_term_meta( $term_id, Warehouse_Taxonomy::META_EMAIL, true ),
+            'custom_text' => get_term_meta( $term_id, Warehouse_Taxonomy::META_CUSTOM_TEXT, true ),
+            'data_text'   => get_term_meta( $term_id, Warehouse_Taxonomy::META_DATA_TEXT, true ),
         ];
     }
 }

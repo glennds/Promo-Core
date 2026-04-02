@@ -1,18 +1,28 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) {exit;}
-if (!function_exists('managepromo_is_enabled') || !managepromo_is_enabled('users_redirect_guests_to_login')) {return;}
+defined('ABSPATH') || exit;
 
 //////////////////////////////////
 // Function contents start HERE //
 //////////////////////////////////
 
 
+
 // Redirect guests to login page
 add_action( 'template_redirect', function() {
     if ( is_user_logged_in() ) return;
 
-    // Skip for admin, login, register, lost password
-    if ( is_admin() || is_page( array( 'inloggen', 'wp-login.php', 'register', 'lostpassword' ) ) ) return;
+    // Skip for admin and public authentication / password-reset pages
+    if ( is_admin() || is_page( array(
+        'inloggen',
+        'login',
+        'forgot-password',
+        'password-reset',
+        'wachtwoord-vergeten',
+        'wachtwoord-reset',
+        'wp-login.php',
+        'register',
+        'lostpassword',
+    ) ) ) return;
 
     // Current subsite path
     $subsite = trim( get_blog_details()->path, '/' );

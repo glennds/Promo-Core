@@ -1,14 +1,14 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) { exit; }
-if ( ! function_exists( 'managepromo_is_enabled' ) || ! managepromo_is_enabled( 'supplier_sync_multisite' ) ) { return; }
+defined('ABSPATH') || exit;
 
 //////////////////////////////////
 // Function contents start HERE //
 //////////////////////////////////
 
 
-if ( ! class_exists( 'MSO_Supplier_Sync' ) ) {
-    class MSO_Supplier_Sync {
+
+if ( ! class_exists( 'MSO_Warehouse_Sync' ) ) {
+    class MSO_Warehouse_Sync {
         /**
          * Keep the last run output for display.
          *
@@ -43,10 +43,10 @@ if ( ! class_exists( 'MSO_Supplier_Sync' ) ) {
          */
         public function register_menu() {
             add_menu_page(
-                __( 'Supplier Sync', 'mso-supplier-sync' ),
-                __( 'Supplier Sync', 'mso-supplier-sync' ),
+                __( 'Warehouse Sync', 'ds-warehouse-sync' ),
+                __( 'Warehouse Sync', 'ds-warehouse-sync' ),
                 'manage_network',
-                'mso-supplier-sync',
+                'ds-warehouse-sync',
                 [ $this, 'render_page' ],
                 'dashicons-migrate',
                 57
@@ -58,15 +58,15 @@ if ( ! class_exists( 'MSO_Supplier_Sync' ) ) {
          */
         public function render_page() {
             if ( ! current_user_can( 'manage_network' ) ) {
-                wp_die( __( 'You do not have permission to access this page.', 'mso-supplier-sync' ) );
+                wp_die( __( 'You do not have permission to access this page.', 'ds-warehouse-sync' ) );
             }
 
             if ( ! is_multisite() ) {
-                echo '<div class="notice notice-error"><p>' . esc_html__( 'This plugin only works on multisite installs.', 'mso-supplier-sync' ) . '</p></div>';
+                echo '<div class="notice notice-error"><p>' . esc_html__( 'This plugin only works on multisite installs.', 'ds-warehouse-sync' ) . '</p></div>';
                 return;
             }
 
-            if ( isset( $_POST['mso_supplier_sync_nonce'] ) ) {
+            if ( isset( $_POST['mso_warehouse_sync_nonce'] ) ) {
                 $this->handle_sync_request();
             }
 
@@ -97,7 +97,7 @@ if ( ! class_exists( 'MSO_Supplier_Sync' ) ) {
          * Handle the form submission and perform the sync.
          */
         private function handle_sync_request() {
-            check_admin_referer( 'mso_supplier_sync_action', 'mso_supplier_sync_nonce' );
+            check_admin_referer( 'mso_warehouse_sync_action', 'mso_warehouse_sync_nonce' );
 
             $source_site      = isset( $_POST['mso_source_site'] ) ? absint( $_POST['mso_source_site'] ) : 0;
             $target_sites_raw = isset( $_POST['mso_target_sites'] ) ? (array) $_POST['mso_target_sites'] : [];
@@ -114,7 +114,7 @@ if ( ! class_exists( 'MSO_Supplier_Sync' ) ) {
             }
 
             if ( ! $source_site || empty( $target_sites ) ) {
-                echo '<div class="notice notice-error"><p>' . esc_html__( 'Select a source site and at least one target site.', 'mso-supplier-sync' ) . '</p></div>';
+                echo '<div class="notice notice-error"><p>' . esc_html__( 'Select a source site and at least one target site.', 'ds-warehouse-sync' ) . '</p></div>';
                 return;
             }
 
@@ -123,7 +123,7 @@ if ( ! class_exists( 'MSO_Supplier_Sync' ) ) {
             }
 
             if ( empty( $target_sites ) ) {
-                echo '<div class="notice notice-warning"><p>' . esc_html__( 'Nothing to sync: target list is empty after removing the source site.', 'mso-supplier-sync' ) . '</p></div>';
+                echo '<div class="notice notice-warning"><p>' . esc_html__( 'Nothing to sync: target list is empty after removing the source site.', 'ds-warehouse-sync' ) . '</p></div>';
                 return;
             }
 
@@ -135,7 +135,7 @@ if ( ! class_exists( 'MSO_Supplier_Sync' ) ) {
             $source_products = $this->build_source_product_map( $source_site, $identifier, $fallback_title );
 
             if ( empty( $source_products['products'] ) ) {
-                echo '<div class="notice notice-warning"><p>' . esc_html__( 'No products with supplier terms found on the source site.', 'mso-supplier-sync' ) . '</p></div>';
+                echo '<div class="notice notice-warning"><p>' . esc_html__( 'No products with warehouse terms found on the source site.', 'ds-warehouse-sync' ) . '</p></div>';
                 return;
             }
 
@@ -153,7 +153,7 @@ if ( ! class_exists( 'MSO_Supplier_Sync' ) ) {
         }
 
         /**
-         * Collect source products and their supplier terms keyed by identifier.
+         * Collect source products and their warehouse terms keyed by identifier.
          *
          * @param int    $source_site
          * @param string $identifier
@@ -191,7 +191,7 @@ if ( ! class_exists( 'MSO_Supplier_Sync' ) ) {
                     continue;
                 }
 
-                $terms = get_the_terms( $product_id, 'supplier' );
+                $terms = get_the_terms( $product_id, 'warehouse' );
                 if ( empty( $terms ) || is_wp_error( $terms ) ) {
                     continue;
                 }
@@ -226,7 +226,7 @@ if ( ! class_exists( 'MSO_Supplier_Sync' ) ) {
             return [
                 'products' => $products,
                 'summary'  => [
-                    'total_with_suppliers' => count( $products ),
+                    'total_with_warehouses' => count( $products ),
                     'duplicates_skipped'   => $duplicates,
                     'missing_identifier'   => $missing_identifiers,
                 ],
@@ -234,7 +234,7 @@ if ( ! class_exists( 'MSO_Supplier_Sync' ) ) {
         }
 
         /**
-         * Sync supplier terms to a target site.
+         * Sync warehouse terms to a target site.
          *
          * @param int    $target_site
          * @param array  $products
@@ -261,7 +261,7 @@ if ( ! class_exists( 'MSO_Supplier_Sync' ) ) {
                     continue;
                 }
 
-                $synced = $this->write_suppliers( $target_product_id, $product['terms'], $replace_existing );
+                $synced = $this->write_warehouses( $target_product_id, $product['terms'], $replace_existing );
 
                 if ( is_wp_error( $synced ) ) {
                     $result['errors'][] = $synced->get_error_message();
@@ -307,16 +307,16 @@ if ( ! class_exists( 'MSO_Supplier_Sync' ) ) {
         }
 
         /**
-         * Persist supplier term links for a single product on the current site.
+         * Persist warehouse term links for a single product on the current site.
          *
          * @param int   $product_id
          * @param array $terms
          * @param bool  $replace_existing
          * @return int|WP_Error Number of written rows or WP_Error on failure.
          */
-        private function write_suppliers( $product_id, $terms, $replace_existing ) {
-            if ( ! taxonomy_exists( 'supplier' ) ) {
-                return new WP_Error( 'missing_taxonomy', __( 'Supplier taxonomy does not exist on target site.', 'mso-supplier-sync' ) );
+        private function write_warehouses( $product_id, $terms, $replace_existing ) {
+            if ( ! taxonomy_exists( 'warehouse' ) ) {
+                return new WP_Error( 'missing_taxonomy', __( 'Warehouse taxonomy does not exist on target site.', 'ds-warehouse-sync' ) );
             }
 
             $term_ids = [];
@@ -330,13 +330,13 @@ if ( ! class_exists( 'MSO_Supplier_Sync' ) ) {
             }
 
             if ( $replace_existing ) {
-                $set = wp_set_object_terms( $product_id, $term_ids, 'supplier' );
+                $set = wp_set_object_terms( $product_id, $term_ids, 'warehouse' );
             } else {
-                $existing = wp_get_object_terms( $product_id, 'supplier', [ 'fields' => 'ids' ] );
+                $existing = wp_get_object_terms( $product_id, 'warehouse', [ 'fields' => 'ids' ] );
                 if ( is_wp_error( $existing ) ) {
                     return $existing;
                 }
-                $set = wp_set_object_terms( $product_id, array_unique( array_merge( $existing, $term_ids ) ), 'supplier' );
+                $set = wp_set_object_terms( $product_id, array_unique( array_merge( $existing, $term_ids ) ), 'warehouse' );
             }
 
             if ( is_wp_error( $set ) ) {
@@ -347,13 +347,13 @@ if ( ! class_exists( 'MSO_Supplier_Sync' ) ) {
         }
 
         /**
-         * Get or create a supplier term on current site and copy meta.
+         * Get or create a warehouse term on current site and copy meta.
          *
          * @param array $term
          * @return int|WP_Error
          */
         private function get_or_create_term( $term ) {
-            $existing = get_term_by( 'slug', $term['slug'], 'supplier' );
+            $existing = get_term_by( 'slug', $term['slug'], 'warehouse' );
             if ( $existing && ! is_wp_error( $existing ) ) {
                 $this->maybe_update_term_meta( $existing->term_id, $term['meta'] );
                 return (int) $existing->term_id;
@@ -361,7 +361,7 @@ if ( ! class_exists( 'MSO_Supplier_Sync' ) ) {
 
             $created = wp_insert_term(
                 $term['name'],
-                'supplier',
+                'warehouse',
                 [
                     'slug'        => $term['slug'],
                     'description' => $term['description'],
@@ -409,18 +409,18 @@ if ( ! class_exists( 'MSO_Supplier_Sync' ) ) {
             $sites = $this->get_sites_list();
             ?>
             <div class="wrap">
-                <h1><?php esc_html_e( 'Supplier Sync', 'mso-supplier-sync' ); ?></h1>
-                <p><?php esc_html_e( 'Copy supplier taxonomy terms from a source subsite to one or more target subsites and attach them to matching products. Matching is done by SKU by default with an optional title fallback.', 'mso-supplier-sync' ); ?></p>
+                <h1><?php esc_html_e( 'Warehouse Sync', 'ds-warehouse-sync' ); ?></h1>
+                <p><?php esc_html_e( 'Copy warehouse taxonomy terms from a source subsite to one or more target subsites and attach them to matching products. Matching is done by SKU by default with an optional title fallback.', 'ds-warehouse-sync' ); ?></p>
 
                 <form method="post">
-                    <?php wp_nonce_field( 'mso_supplier_sync_action', 'mso_supplier_sync_nonce' ); ?>
+                    <?php wp_nonce_field( 'mso_warehouse_sync_action', 'mso_warehouse_sync_nonce' ); ?>
 
                     <table class="form-table">
                         <tr>
-                            <th scope="row"><?php esc_html_e( 'Source site', 'mso-supplier-sync' ); ?></th>
+                            <th scope="row"><?php esc_html_e( 'Source site', 'ds-warehouse-sync' ); ?></th>
                             <td>
                                 <select name="mso_source_site" required>
-                                    <option value=""><?php esc_html_e( 'Select source site', 'mso-supplier-sync' ); ?></option>
+                                    <option value=""><?php esc_html_e( 'Select source site', 'ds-warehouse-sync' ); ?></option>
                                     <?php foreach ( $sites as $site ) : ?>
                                         <option value="<?php echo esc_attr( $site['blog_id'] ); ?>">
                                             <?php echo esc_html( $site['name'] . ' (' . $site['path'] . ')' ); ?>
@@ -430,7 +430,7 @@ if ( ! class_exists( 'MSO_Supplier_Sync' ) ) {
                             </td>
                         </tr>
                         <tr>
-                            <th scope="row"><?php esc_html_e( 'Target sites', 'mso-supplier-sync' ); ?></th>
+                            <th scope="row"><?php esc_html_e( 'Target sites', 'ds-warehouse-sync' ); ?></th>
                             <td>
                                 <select name="mso_target_sites[]" multiple size="8" required style="min-width: 280px;">
                                     <?php foreach ( $sites as $site ) : ?>
@@ -439,39 +439,39 @@ if ( ! class_exists( 'MSO_Supplier_Sync' ) ) {
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
-                                <p class="description"><?php esc_html_e( 'Hold Ctrl/Cmd to select multiple sites. The source site will be removed from the target list automatically.', 'mso-supplier-sync' ); ?></p>
+                                <p class="description"><?php esc_html_e( 'Hold Ctrl/Cmd to select multiple sites. The source site will be removed from the target list automatically.', 'ds-warehouse-sync' ); ?></p>
                             </td>
                         </tr>
                         <tr>
-                            <th scope="row"><?php esc_html_e( 'Product identifier', 'mso-supplier-sync' ); ?></th>
+                            <th scope="row"><?php esc_html_e( 'Product identifier', 'ds-warehouse-sync' ); ?></th>
                             <td>
                                 <label>
                                     <input type="radio" name="mso_identifier" value="title" checked>
-                                    <?php esc_html_e( 'Productnaam (aanbevolen)', 'mso-supplier-sync' ); ?>
+                                    <?php esc_html_e( 'Productnaam (aanbevolen)', 'ds-warehouse-sync' ); ?>
                                 </label><br>
                                 <label>
                                     <input type="radio" name="mso_identifier" value="sku">
-                                    <?php esc_html_e( 'SKU (NIET aanbevolen)', 'mso-supplier-sync' ); ?>
+                                    <?php esc_html_e( 'SKU (NIET aanbevolen)', 'ds-warehouse-sync' ); ?>
                                 </label><br>
                                 <label>
                                     <input type="checkbox" name="mso_fallback_title" value="1">
-                                    <?php esc_html_e( 'Als SKU leeg is, gebruik producttitel als fallback', 'mso-supplier-sync' ); ?>
+                                    <?php esc_html_e( 'Als SKU leeg is, gebruik producttitel als fallback', 'ds-warehouse-sync' ); ?>
                                 </label>
                             </td>
                         </tr>
                         <tr>
-                            <th scope="row"><?php esc_html_e( 'Bestaande connecties bijwerken', 'mso-supplier-sync' ); ?></th>
+                            <th scope="row"><?php esc_html_e( 'Bestaande connecties bijwerken', 'ds-warehouse-sync' ); ?></th>
                             <td>
                                 <label>
                                     <input type="checkbox" name="mso_replace_existing" value="1" checked>
-                                    <?php esc_html_e( 'Replace existing supplier terms on target products', 'mso-supplier-sync' ); ?>
+                                    <?php esc_html_e( 'Replace existing warehouse terms on target products', 'ds-warehouse-sync' ); ?>
                                 </label>
                             </td>
                         </tr>
                     </table>
 
                     <p>
-                        <button type="submit" class="button button-primary"><?php esc_html_e( 'Synchroniseren', 'mso-supplier-sync' ); ?></button>
+                        <button type="submit" class="button button-primary"><?php esc_html_e( 'Synchroniseren', 'ds-warehouse-sync' ); ?></button>
                     </p>
                 </form>
             </div>
@@ -488,24 +488,24 @@ if ( ! class_exists( 'MSO_Supplier_Sync' ) ) {
                 return;
             }
 
-            echo '<div class="notice notice-success"><p>' . esc_html__( 'Supplier sync finished.', 'mso-supplier-sync' ) . '</p></div>';
+            echo '<div class="notice notice-success"><p>' . esc_html__( 'Warehouse sync finished.', 'ds-warehouse-sync' ) . '</p></div>';
 
-            echo '<h2>' . esc_html__( 'Summary', 'mso-supplier-sync' ) . '</h2>';
+            echo '<h2>' . esc_html__( 'Summary', 'ds-warehouse-sync' ) . '</h2>';
             echo '<p>' . sprintf(
                 /* translators: 1: number of products, 2: duplicates, 3: missing identifier */
-                esc_html__( '%1$d products with suppliers in source. %2$d duplicates skipped. %3$d without identifier skipped.', 'mso-supplier-sync' ),
-                (int) $source_summary['total_with_suppliers'],
+                esc_html__( '%1$d products with warehouses in source. %2$d duplicates skipped. %3$d without identifier skipped.', 'ds-warehouse-sync' ),
+                (int) $source_summary['total_with_warehouses'],
                 (int) $source_summary['duplicates_skipped'],
                 (int) $source_summary['missing_identifier']
             ) . '</p>';
 
             echo '<table class="widefat striped" style="max-width: 900px;">';
             echo '<thead><tr>';
-            echo '<th>' . esc_html__( 'Target site', 'mso-supplier-sync' ) . '</th>';
-            echo '<th>' . esc_html__( 'Matched products', 'mso-supplier-sync' ) . '</th>';
-            echo '<th>' . esc_html__( 'Supplier links written', 'mso-supplier-sync' ) . '</th>';
-            echo '<th>' . esc_html__( 'Products not found', 'mso-supplier-sync' ) . '</th>';
-            echo '<th>' . esc_html__( 'Errors', 'mso-supplier-sync' ) . '</th>';
+            echo '<th>' . esc_html__( 'Target site', 'ds-warehouse-sync' ) . '</th>';
+            echo '<th>' . esc_html__( 'Matched products', 'ds-warehouse-sync' ) . '</th>';
+            echo '<th>' . esc_html__( 'Warehouse links written', 'ds-warehouse-sync' ) . '</th>';
+            echo '<th>' . esc_html__( 'Products not found', 'ds-warehouse-sync' ) . '</th>';
+            echo '<th>' . esc_html__( 'Errors', 'ds-warehouse-sync' ) . '</th>';
             echo '</tr></thead><tbody>';
 
             foreach ( $this->last_results['targets'] as $blog_id => $data ) {
@@ -535,5 +535,5 @@ if ( ! class_exists( 'MSO_Supplier_Sync' ) ) {
         }
     }
 
-    MSO_Supplier_Sync::instance();
+    MSO_Warehouse_Sync::instance();
 }

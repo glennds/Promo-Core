@@ -1,10 +1,11 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) { exit; }
-if ( ! function_exists( 'managepromo_is_enabled' ) || ! managepromo_is_enabled( 'woo_variable_product_flag' ) ) { return; }
+defined('ABSPATH') || exit;
 
 //////////////////////////////////
 // Function contents start HERE //
 //////////////////////////////////
+
+
 
 if ( class_exists( 'DS_IsVariable_Flag' ) ) { return; }
 

@@ -1,6 +1,11 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) { exit; }
-if ( ! function_exists( 'managepromo_is_enabled' ) || ! managepromo_is_enabled( 'woo_quantity_step' ) ) { return; }
+defined('ABSPATH') || exit;
+
+//////////////////////////////////
+// Function contents start HERE //
+//////////////////////////////////
+
+
 
 function mpc_qty_step_sanitize( $raw ): int {
     $step = absint( $raw );
