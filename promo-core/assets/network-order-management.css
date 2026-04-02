@@ -1,0 +1,229 @@
+/* Network Order Management - Admin CSS */
+
+.nom-filters {
+    background: #fff;
+    padding: 20px;
+    margin: 20px 0;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.nom-filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: flex-end;
+    margin-bottom: 15px;
+}
+
+.nom-filter-item {
+    flex: 1;
+    min-width: 180px;
+}
+
+.nom-filter-item label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.nom-filter-item select,
+.nom-filter-item input[type="date"] {
+    width: 100%;
+    max-width: 250px;
+}
+
+.nom-filter-actions {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+}
+
+.nom-export-actions {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
+
+.nom-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.nom-stat-box {
+    background: #fff;
+    padding: 20px;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+    text-align: center;
+}
+
+.nom-stat-box h3 {
+    margin: 0 0 5px 0;
+    font-size: 32px;
+    font-weight: 600;
+    color: #0073aa;
+}
+
+.nom-stat-box p {
+    margin: 0;
+    color: #666;
+    font-size: 14px;
+}
+
+.nom-orders-table {
+    background: #fff;
+    padding: 20px;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+    overflow-x: auto;
+}
+
+.nom-orders-table table {
+    width: 100%;
+    min-width: 1200px;
+}
+
+.nom-orders-table table th {
+    font-weight: 600;
+    background: #f9f9f9;
+    padding: 12px 10px;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.nom-orders-table table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid #eee;
+    vertical-align: top;
+}
+
+.nom-orders-table table tr:hover {
+    background: #f9f9f9;
+}
+
+.nom-warehouse-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    margin: 2px 0;
+    background: #2271b1;
+    color: #fff;
+    border-radius: 3px;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.nom-no-warehouse {
+    color: #999;
+    font-style: italic;
+    font-size: 12px;
+}
+
+.order-status {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.order-status.status-pending {
+    background: #f0ad4e;
+    color: #fff;
+}
+
+.order-status.status-processing {
+    background: #5bc0de;
+    color: #fff;
+}
+
+.order-status.status-on-hold {
+    background: #999;
+    color: #fff;
+}
+
+.order-status.status-completed {
+    background: #5cb85c;
+    color: #fff;
+}
+
+.order-status.status-cancelled,
+.order-status.status-failed {
+    background: #d9534f;
+    color: #fff;
+}
+
+.order-status.status-refunded {
+    background: #777;
+    color: #fff;
+}
+
+@media screen and (max-width: 1200px) {
+    .nom-filter-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .nom-filter-item {
+        min-width: 100%;
+    }
+    
+    .nom-filter-item select,
+    .nom-filter-item input[type="date"] {
+        max-width: 100%;
+    }
+}
+
+/* Warehouse Settings Styles */
+.nom-send-individual-email {
+    white-space: nowrap;
+}
+
+.nom-send-individual-email .dashicons {
+    vertical-align: middle;
+}
+
+.nom-email-status {
+    display: inline-block;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 5px 10px;
+    border-radius: 3px;
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media screen and (max-width: 782px) {
+    .nom-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .nom-orders-table {
+        padding: 10px;
+    }
+    
+    .nom-send-individual-email {
+        font-size: 12px;
+        padding: 4px 8px;
+    }
+    
+    .nom-send-individual-email .dashicons {
+        width: 16px;
+        height: 16px;
+        font-size: 16px;
+    }
+}

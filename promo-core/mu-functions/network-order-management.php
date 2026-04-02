@@ -200,8 +200,24 @@ if ( ! class_exists( 'Network_Warehouse_Orders' ) ) {
             return;
         }
 
-        wp_enqueue_style('nom-admin', NSO_PLUGIN_URL . 'assets/network-order-management.css', array(), NSO_VERSION);
-        wp_enqueue_script('nom-admin', NSO_PLUGIN_URL . 'assets/network-order-management.js', array('jquery'), NSO_VERSION, true);
+        $style_rel_path = 'assets/network-order-management.css';
+        $script_rel_path = 'assets/network-order-management.js';
+        $style_path = NSO_PLUGIN_DIR . $style_rel_path;
+        $script_path = NSO_PLUGIN_DIR . $script_rel_path;
+
+        wp_enqueue_style(
+            'nom-admin',
+            NSO_PLUGIN_URL . $style_rel_path,
+            array(),
+            file_exists($style_path) ? filemtime($style_path) : NSO_VERSION
+        );
+        wp_enqueue_script(
+            'nom-admin',
+            NSO_PLUGIN_URL . $script_rel_path,
+            array('jquery'),
+            file_exists($script_path) ? filemtime($script_path) : NSO_VERSION,
+            true
+        );
 
         wp_localize_script('nom-admin', 'nomAdmin', array(
             'ajax_url' => admin_url('admin-ajax.php'),
@@ -599,6 +615,7 @@ if ( ! class_exists( 'Network_Warehouse_Orders' ) ) {
                     $customer_first_name = $order->get_billing_first_name();
                     $customer_last_name = $order->get_billing_last_name();
                     $address_components = $this->extract_order_address_components($order);
+                    $regular_total_raw = $this->get_line_item_regular_total($item, $product);
                     
                     $all_orders[] = array(
                         'order_id' => $order->get_id(),
@@ -619,6 +636,7 @@ if ( ! class_exists( 'Network_Warehouse_Orders' ) ) {
                         'quantity' => $item->get_quantity(),
                         'total' => wc_price($item->get_total()),
                         'total_raw' => $item->get_total(),
+                        'regular_total_raw' => $regular_total_raw,
                         'status' => $order->get_status(),
                         'status_name' => wc_get_order_status_name($order->get_status()),
                         'order_url' => get_edit_post_link($order->get_id()),
@@ -706,6 +724,7 @@ if ( ! class_exists( 'Network_Warehouse_Orders' ) ) {
                     $customer_first_name = $order->get_billing_first_name();
                     $customer_last_name = $order->get_billing_last_name();
                     $address_components = $this->extract_order_address_components($order);
+                    $regular_total_raw = $this->get_line_item_regular_total($item, $product);
                     
                     $all_orders[] = array(
                         'order_id' => $order->get_id(),
@@ -726,6 +745,7 @@ if ( ! class_exists( 'Network_Warehouse_Orders' ) ) {
                         'quantity' => $item->get_quantity(),
                         'total' => wc_price($item->get_total()),
                         'total_raw' => $item->get_total(),
+                        'regular_total_raw' => $regular_total_raw,
                         'status' => $order->get_status(),
                         'status_name' => wc_get_order_status_name($order->get_status()),
                         'order_url' => get_edit_post_link($order->get_id()),
@@ -1034,11 +1054,48 @@ if ( ! class_exists( 'Network_Warehouse_Orders' ) ) {
             'wc-failed' => 'Failed',
         );
     }
+
+    private function get_line_item_regular_total($item, $product) {
+        $quantity = (float) $item->get_quantity();
+        if ($quantity <= 0 || !$product) {
+            return 0.0;
+        }
+
+        $regular_price = '';
+        if (is_callable(array($product, 'get_regular_price'))) {
+            $regular_price = (string) $product->get_regular_price('edit');
+        }
+
+        if ($regular_price === '' && $product->is_type('variation')) {
+            $parent_id = (int) $product->get_parent_id();
+            if ($parent_id > 0) {
+                $parent_product = wc_get_product($parent_id);
+                if ($parent_product && is_callable(array($parent_product, 'get_regular_price'))) {
+                    $regular_price = (string) $parent_product->get_regular_price('edit');
+                }
+            }
+        }
+
+        if ($regular_price === '' && is_callable(array($product, 'get_price'))) {
+            $regular_price = (string) $product->get_price('edit');
+        }
+
+        if ($regular_price !== '') {
+            return (float) $regular_price * $quantity;
+        }
+
+        $line_subtotal = (float) $item->get_subtotal();
+        if ($line_subtotal > 0) {
+            return $line_subtotal;
+        }
+
+        return (float) $item->get_total();
+    }
     
     private function calculate_total_value($orders) {
         $total = 0;
         foreach ($orders as $order) {
-            $total += $order['total_raw'];
+            $total += isset($order['regular_total_raw']) ? (float) $order['regular_total_raw'] : (float) $order['total_raw'];
         }
         
         // Get currency from main site
