@@ -23,10 +23,10 @@ defined('ABSPATH') || exit;
 require_once plugin_dir_path(__FILE__) . 'mu-functions/cleanup-breakdance.php';
 require_once plugin_dir_path(__FILE__) . 'mu-functions/force-woocommerce-hooks.php';
 require_once plugin_dir_path(__FILE__) . 'mu-functions/improve-multisite-passwordreset.php';
-require_once plugin_dir_path(__FILE__) . 'mu-functions/woo-custom-billing-address.php';
-require_once plugin_dir_path(__FILE__) . 'mu-functions/network-supplier-orders.php';
+require_once plugin_dir_path(__FILE__) . 'mu-functions/network-order-management.php';
 require_once plugin_dir_path(__FILE__) . 'mu-functions/warehouse-sync.php';
 require_once plugin_dir_path(__FILE__) . 'mu-functions/warehouse-taxonomy.php';
+require_once plugin_dir_path(__FILE__) . 'mu-functions/woo-custom-billing-address.php';
 
 
 

@@ -39,39 +39,39 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
     private function __construct() {
         add_action('network_admin_menu', array($this, 'add_network_menu'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
-        add_action('wp_ajax_nso_export_orders', array($this, 'export_orders'));
-        add_action('wp_ajax_nso_manual_export_email', array($this, 'manual_export_email'));
-        add_action('wp_ajax_nso_save_supplier_settings', array($this, 'save_supplier_settings'));
-        add_action('wp_ajax_nso_send_individual_supplier_email', array($this, 'send_individual_supplier_email'));
-        add_action('wp_ajax_nso_save_email_schedule', array($this, 'save_email_schedule'));
+        add_action('wp_ajax_nom_export_orders', array($this, 'export_orders'));
+        add_action('wp_ajax_nom_manual_export_email', array($this, 'manual_export_email'));
+        add_action('wp_ajax_nom_save_warehouse_settings', array($this, 'save_warehouse_settings'));
+        add_action('wp_ajax_nom_send_individual_warehouse_email', array($this, 'send_individual_warehouse_email'));
+        add_action('wp_ajax_nom_save_email_schedule', array($this, 'save_email_schedule'));
         add_action('rest_api_init', array($this, 'register_rest_routes'));
         add_action('init', array($this, 'ensure_cron_schedule'));
         
-        // Hook into supplier creation to create folders
-        add_action('created_supplier', array($this, 'create_supplier_folder'), 10, 2);
+        // Hook into warehouse creation to create folders
+        add_action('created_warehouse', array($this, 'create_warehouse_folder'), 10, 2);
         
         // Schedule daily cron job
-        add_action('nso_daily_supplier_export', array($this, 'daily_supplier_export'));
+        add_action('nom_daily_warehouse_export', array($this, 'daily_warehouse_export'));
 
         // Deferred test email job
-        add_action('nso_deferred_supplier_test_email', array($this, 'run_deferred_supplier_test_email'), 10, 1);
+        add_action('nom_deferred_warehouse_test_email', array($this, 'run_deferred_warehouse_test_email'), 10, 1);
         
     }
 
     /**
-     * Check if WP cron-based supplier emails are disabled (external cron in use)
+     * Check if WP cron-based warehouse emails are disabled (external cron in use)
      */
     private function is_wp_cron_disabled() {
-        return (bool) get_site_option('nso_disable_wp_cron', false);
+        return (bool) get_site_option('nom_disable_wp_cron', false);
     }
 
     /**
      * Unschedule the plugin's daily cron event
      */
     private function unschedule_cron_job() {
-        $timestamp = wp_next_scheduled('nso_daily_supplier_export');
+        $timestamp = wp_next_scheduled('nom_daily_warehouse_export');
         if ($timestamp) {
-            wp_unschedule_event($timestamp, 'nso_daily_supplier_export');
+            wp_unschedule_event($timestamp, 'nom_daily_warehouse_export');
         }
     }
 
@@ -111,36 +111,36 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
     }
 
     /**
-     * Ensure the supplier taxonomy is registered for the current blog context.
+     * Ensure the warehouse taxonomy is registered for the current blog context.
      */
-    private function ensure_supplier_taxonomy() {
-        if ( taxonomy_exists( 'supplier' ) ) {
+    private function ensure_warehouse_taxonomy() {
+        if ( taxonomy_exists( 'warehouse' ) ) {
             return;
         }
 
         $labels = array(
-            'name'                       => __( 'Suppliers', 'network-supplier-orders' ),
-            'singular_name'              => __( 'Supplier', 'network-supplier-orders' ),
-            'menu_name'                  => __( 'Suppliers', 'network-supplier-orders' ),
-            'all_items'                  => __( 'All Suppliers', 'network-supplier-orders' ),
-            'parent_item'                => __( 'Parent Supplier', 'network-supplier-orders' ),
-            'parent_item_colon'          => __( 'Parent Supplier:', 'network-supplier-orders' ),
-            'new_item_name'              => __( 'Name of new Supplier', 'network-supplier-orders' ),
-            'add_new_item'               => __( 'New Supplier', 'network-supplier-orders' ),
-            'edit_item'                  => __( 'Edit Supplier', 'network-supplier-orders' ),
-            'update_item'                => __( 'Update Supplier', 'network-supplier-orders' ),
-            'view_item'                  => __( 'View Supplier', 'network-supplier-orders' ),
-            'separate_items_with_commas' => __( 'Separate suppliers with commas', 'network-supplier-orders' ),
-            'search_items'               => __( 'Search Suppliers', 'network-supplier-orders' ),
-            'add_or_remove_items'        => __( 'Add or remove suppliers', 'network-supplier-orders' ),
-            'choose_from_most_used'      => __( 'Choose from the most used suppliers', 'network-supplier-orders' ),
-            'not_found'                  => __( 'No suppliers found', 'network-supplier-orders' ),
+            'name'                       => __( 'Suppliers', 'network-order-management' ),
+            'singular_name'              => __( 'Supplier', 'network-order-management' ),
+            'menu_name'                  => __( 'Suppliers', 'network-order-management' ),
+            'all_items'                  => __( 'All Suppliers', 'network-order-management' ),
+            'parent_item'                => __( 'Parent Supplier', 'network-order-management' ),
+            'parent_item_colon'          => __( 'Parent Supplier:', 'network-order-management' ),
+            'new_item_name'              => __( 'Name of new Supplier', 'network-order-management' ),
+            'add_new_item'               => __( 'New Supplier', 'network-order-management' ),
+            'edit_item'                  => __( 'Edit Supplier', 'network-order-management' ),
+            'update_item'                => __( 'Update Supplier', 'network-order-management' ),
+            'view_item'                  => __( 'View Supplier', 'network-order-management' ),
+            'separate_items_with_commas' => __( 'Separate warehouses with commas', 'network-order-management' ),
+            'search_items'               => __( 'Search Suppliers', 'network-order-management' ),
+            'add_or_remove_items'        => __( 'Add or remove warehouses', 'network-order-management' ),
+            'choose_from_most_used'      => __( 'Choose from the most used warehouses', 'network-order-management' ),
+            'not_found'                  => __( 'No warehouses found', 'network-order-management' ),
         );
 
         $args = array(
             'labels'            => $labels,
             'hierarchical'      => true,
-            'rewrite'           => array( 'slug' => 'supplier', 'with_front' => false ),
+            'rewrite'           => array( 'slug' => 'warehouse', 'with_front' => false ),
             'public'            => true,
             'show_ui'           => true,
             'show_admin_column' => true,
@@ -149,16 +149,16 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
             'show_in_rest'      => true,
         );
 
-        register_taxonomy( 'supplier', array( 'product' ), $args );
-        register_taxonomy_for_object_type( 'supplier', 'product' );
+        register_taxonomy( 'warehouse', array( 'product' ), $args );
+        register_taxonomy_for_object_type( 'warehouse', 'product' );
     }
     
     public function add_network_menu() {
         add_menu_page(
-            __('Network Orders', 'network-supplier-orders'),
-            __('Network Orders', 'network-supplier-orders'),
+            __('Network Orders', 'network-order-management'),
+            __('Network Orders', 'network-order-management'),
             'manage_network',
-            'nso-network-orders',
+            'nom-network-orders',
             array($this, 'network_orders_page'),
             'dashicons-cart',
             56
@@ -166,21 +166,21 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         
         // Add settings submenu
         add_submenu_page(
-            'nso-network-orders',
-            __('Supplier Email Settings', 'network-supplier-orders'),
-            __('Email Settings', 'network-supplier-orders'),
+            'nom-network-orders',
+            __('Supplier Email Settings', 'network-order-management'),
+            __('Email Settings', 'network-order-management'),
             'manage_network',
-            'nso-supplier-settings',
-            array($this, 'supplier_settings_page')
+            'nom-warehouse-settings',
+            array($this, 'warehouse_settings_page')
         );
         
         // Add time configuration submenu
         add_submenu_page(
-            'nso-network-orders',
-            __('Automated Email Time', 'network-supplier-orders'),
-            __('Email Schedule', 'network-supplier-orders'),
+            'nom-network-orders',
+            __('Automated Email Time', 'network-order-management'),
+            __('Email Schedule', 'network-order-management'),
             'manage_network',
-            'nso-email-schedule',
+            'nom-email-schedule',
             array($this, 'email_schedule_page')
         );
     }
@@ -191,27 +191,27 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         }
 
         $valid_hooks = array(
-            'toplevel_page_nso-network-orders',
-            'nso-network-orders_page_nso-supplier-settings',
-            'nso-network-orders_page_nso-email-schedule',
+            'toplevel_page_nom-network-orders',
+            'nom-network-orders_page_nom-warehouse-settings',
+            'nom-network-orders_page_nom-email-schedule',
         );
 
         if ( ! in_array( $hook, $valid_hooks, true ) ) {
             return;
         }
 
-        wp_enqueue_style('nso-admin', NSO_PLUGIN_URL . 'assets/network-supplier-orders.css', array(), NSO_VERSION);
-        wp_enqueue_script('nso-admin', NSO_PLUGIN_URL . 'assets/network-supplier-orders.js', array('jquery'), NSO_VERSION, true);
+        wp_enqueue_style('nom-admin', NSO_PLUGIN_URL . 'assets/network-order-management.css', array(), NSO_VERSION);
+        wp_enqueue_script('nom-admin', NSO_PLUGIN_URL . 'assets/network-order-management.js', array('jquery'), NSO_VERSION, true);
 
-        wp_localize_script('nso-admin', 'nsoAdmin', array(
+        wp_localize_script('nom-admin', 'nomAdmin', array(
             'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('nso_export_nonce')
+            'nonce' => wp_create_nonce('nom_export_nonce')
         ));
     }
     
     public function network_orders_page() {
         // Get filter parameters
-        $supplier_filter = isset($_GET['supplier']) ? sanitize_text_field($_GET['supplier']) : '';
+        $warehouse_filter = isset($_GET['warehouse']) ? sanitize_text_field($_GET['warehouse']) : '';
         $site_filter = isset($_GET['site']) ? intval($_GET['site']) : 0;
         $status_filter = isset($_GET['status']) ? sanitize_text_field($_GET['status']) : '';
         $date_from = isset($_GET['date_from']) ? sanitize_text_field($_GET['date_from']) : '';
@@ -231,23 +231,23 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         // Get only the main site
         $sites = $this->get_main_sites();
         
-        // Get all suppliers from taxonomy (all sites)
-        $all_suppliers = array();
+        // Get all warehouses from taxonomy (all sites)
+        $all_warehouses = array();
         foreach ($sites as $site) {
             switch_to_blog($site->blog_id);
 
-            $this->ensure_supplier_taxonomy();
+            $this->ensure_warehouse_taxonomy();
             
-            if (taxonomy_exists('supplier')) {
-                $site_suppliers = get_terms(array(
-                    'taxonomy' => 'supplier',
+            if (taxonomy_exists('warehouse')) {
+                $site_warehouses = get_terms(array(
+                    'taxonomy' => 'warehouse',
                     'hide_empty' => false,
                 ));
                 
-                if (!is_wp_error($site_suppliers)) {
-                    foreach ($site_suppliers as $supplier) {
-                        if (!isset($all_suppliers[$supplier->slug])) {
-                            $all_suppliers[$supplier->slug] = $supplier;
+                if (!is_wp_error($site_warehouses)) {
+                    foreach ($site_warehouses as $warehouse) {
+                        if (!isset($all_warehouses[$warehouse->slug])) {
+                            $all_warehouses[$warehouse->slug] = $warehouse;
                         }
                     }
                 }
@@ -260,7 +260,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         $order_statuses = $this->get_order_statuses();
         
         // Get orders
-        $orders = $this->get_all_orders($supplier_filter, $site_filter, $status_filter, $date_from, $date_to);
+        $orders = $this->get_all_orders($warehouse_filter, $site_filter, $status_filter, $date_from, $date_to);
         $total_orders = count($orders);
         $total_pages = max(1, (int) ceil($total_orders / $per_page));
         if ($current_page > $total_pages) {
@@ -269,8 +269,8 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         $offset = ($current_page - 1) * $per_page;
         $paged_orders = array_slice($orders, $offset, $per_page);
         $pagination_args = array(
-            'page' => 'nso-network-orders',
-            'supplier' => $supplier_filter !== '' ? $supplier_filter : null,
+            'page' => 'nom-network-orders',
+            'warehouse' => $warehouse_filter !== '' ? $warehouse_filter : null,
             'site' => $site_filter ? $site_filter : null,
             'status' => $status_filter !== '' ? $status_filter : null,
             'date_from' => $date_from !== '' ? $date_from : null,
@@ -286,57 +286,57 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
             'current' => $current_page,
             'total' => $total_pages,
             'type' => 'array',
-            'prev_text' => __('Previous', 'network-supplier-orders'),
-            'next_text' => __('Next', 'network-supplier-orders'),
+            'prev_text' => __('Previous', 'network-order-management'),
+            'next_text' => __('Next', 'network-order-management'),
         ));
         $display_start = $total_orders > 0 ? ($offset + 1) : 0;
         $display_end = $total_orders > 0 ? min($offset + $per_page, $total_orders) : 0;
         
         ?>
         <div class="wrap">
-            <h1><?php _e('Network Orders by Supplier', 'network-supplier-orders'); ?></h1>
+            <h1><?php _e('Network Orders by Supplier', 'network-order-management'); ?></h1>
             
             <?php if (isset($_GET['debug'])): ?>
                 <div class="notice notice-info">
                     <p><strong>Debug Info:</strong></p>
                     <ul>
-                        <li>Suppliers found: <?php echo count($all_suppliers); ?></li>
+                        <li>Suppliers found: <?php echo count($all_warehouses); ?></li>
                         <li>Orders found: <?php echo count($orders); ?></li>
                         <li>Sites: <?php echo count($sites); ?></li>
                     </ul>
                 </div>
             <?php endif; ?>
             
-            <?php if (empty($all_suppliers)): ?>
+            <?php if (empty($all_warehouses)): ?>
                 <div class="notice notice-warning">
                     <p>
-                        <strong><?php _e('No suppliers found!', 'network-supplier-orders'); ?></strong><br>
-                        <?php _e('Make sure the Supplier Order Email plugin is installed and suppliers are created.', 'network-supplier-orders'); ?>
+                        <strong><?php _e('No warehouses found!', 'network-order-management'); ?></strong><br>
+                        <?php _e('Make sure the Supplier Order Email plugin is installed and warehouses are created.', 'network-order-management'); ?>
                     </p>
                 </div>
             <?php endif; ?>
             
-            <div class="nso-filters">
-                <form method="get" action="<?php echo esc_url(network_admin_url('admin.php?page=nso-network-orders')); ?>">
-                    <input type="hidden" name="page" value="nso-network-orders">
+            <div class="nom-filters">
+                <form method="get" action="<?php echo esc_url(network_admin_url('admin.php?page=nom-network-orders')); ?>">
+                    <input type="hidden" name="page" value="nom-network-orders">
                     
-                    <div class="nso-filter-row">
-                        <div class="nso-filter-item">
-                            <label for="supplier"><?php _e('Supplier:', 'network-supplier-orders'); ?></label>
-                            <select name="supplier" id="supplier">
-                                <option value=""><?php _e('All Suppliers', 'network-supplier-orders'); ?></option>
-                                <?php foreach ($all_suppliers as $supplier): ?>
-                                    <option value="<?php echo esc_attr($supplier->slug); ?>" <?php selected($supplier_filter, $supplier->slug); ?>>
-                                        <?php echo esc_html($supplier->name); ?>
+                    <div class="nom-filter-row">
+                        <div class="nom-filter-item">
+                            <label for="warehouse"><?php _e('Supplier:', 'network-order-management'); ?></label>
+                            <select name="warehouse" id="warehouse">
+                                <option value=""><?php _e('All Suppliers', 'network-order-management'); ?></option>
+                                <?php foreach ($all_warehouses as $warehouse): ?>
+                                    <option value="<?php echo esc_attr($warehouse->slug); ?>" <?php selected($warehouse_filter, $warehouse->slug); ?>>
+                                        <?php echo esc_html($warehouse->name); ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
                         
-                        <div class="nso-filter-item">
-                            <label for="site"><?php _e('Site:', 'network-supplier-orders'); ?></label>
+                        <div class="nom-filter-item">
+                            <label for="site"><?php _e('Site:', 'network-order-management'); ?></label>
                             <select name="site" id="site">
-                                <option value="0"><?php _e('All Sites', 'network-supplier-orders'); ?></option>
+                                <option value="0"><?php _e('All Sites', 'network-order-management'); ?></option>
                                 <?php foreach ($sites as $site): ?>
                                     <option value="<?php echo $site->blog_id; ?>" <?php selected($site_filter, $site->blog_id); ?>>
                                         <?php 
@@ -349,10 +349,10 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                             </select>
                         </div>
                         
-                        <div class="nso-filter-item">
-                            <label for="status"><?php _e('Status:', 'network-supplier-orders'); ?></label>
+                        <div class="nom-filter-item">
+                            <label for="status"><?php _e('Status:', 'network-order-management'); ?></label>
                             <select name="status" id="status">
-                                <option value=""><?php _e('All Statuses', 'network-supplier-orders'); ?></option>
+                                <option value=""><?php _e('All Statuses', 'network-order-management'); ?></option>
                                 <?php foreach ($order_statuses as $status_key => $status_label): ?>
                                     <option value="<?php echo esc_attr($status_key); ?>" <?php selected($status_filter, $status_key); ?>>
                                         <?php echo esc_html($status_label); ?>
@@ -361,18 +361,18 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                             </select>
                         </div>
                         
-                        <div class="nso-filter-item">
-                            <label for="date_from"><?php _e('Date From:', 'network-supplier-orders'); ?></label>
+                        <div class="nom-filter-item">
+                            <label for="date_from"><?php _e('Date From:', 'network-order-management'); ?></label>
                             <input type="date" name="date_from" id="date_from" value="<?php echo esc_attr($date_from); ?>">
                         </div>
                         
-                        <div class="nso-filter-item">
-                            <label for="date_to"><?php _e('Date To:', 'network-supplier-orders'); ?></label>
+                        <div class="nom-filter-item">
+                            <label for="date_to"><?php _e('Date To:', 'network-order-management'); ?></label>
                             <input type="date" name="date_to" id="date_to" value="<?php echo esc_attr($date_to); ?>">
                         </div>
                         
-                        <div class="nso-filter-item">
-                            <label for="per_page"><?php _e('Orders per page:', 'network-supplier-orders'); ?></label>
+                        <div class="nom-filter-item">
+                            <label for="per_page"><?php _e('Orders per page:', 'network-order-management'); ?></label>
                             <select name="per_page" id="per_page">
                                 <?php foreach ($per_page_options as $option): ?>
                                     <option value="<?php echo esc_attr($option); ?>" <?php selected($per_page, $option); ?>>
@@ -382,78 +382,78 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                             </select>
                         </div>
                         
-                        <div class="nso-filter-actions">
-                            <button type="submit" class="button button-primary"><?php _e('Filter', 'network-supplier-orders'); ?></button>
-                            <a href="<?php echo network_admin_url('admin.php?page=nso-network-orders'); ?>" class="button"><?php _e('Reset', 'network-supplier-orders'); ?></a>
+                        <div class="nom-filter-actions">
+                            <button type="submit" class="button button-primary"><?php _e('Filter', 'network-order-management'); ?></button>
+                            <a href="<?php echo network_admin_url('admin.php?page=nom-network-orders'); ?>" class="button"><?php _e('Reset', 'network-order-management'); ?></a>
                         </div>
                     </div>
                 </form>
                 
-                <div class="nso-export-actions">
-                    <button id="nso-export-csv" class="button button-secondary"><?php _e('Export to CSV', 'network-supplier-orders'); ?></button>
-                    <button id="nso-email-suppliers" class="button button-primary" style="margin-left: 10px;">
+                <div class="nom-export-actions">
+                    <button id="nom-export-csv" class="button button-secondary"><?php _e('Export to CSV', 'network-order-management'); ?></button>
+                    <button id="nom-email-warehouses" class="button button-primary" style="margin-left: 10px;">
                         <span class="dashicons dashicons-email" style="margin-top: 3px;"></span>
-                        <?php _e('Export & Email All Suppliers Now', 'network-supplier-orders'); ?>
+                        <?php _e('Export & Email All Suppliers Now', 'network-order-management'); ?>
                     </button>
                 </div>
                 
-                <div id="nso-email-result" style="margin-top: 10px; display: none;"></div>
+                <div id="nom-email-result" style="margin-top: 10px; display: none;"></div>
             </div>
             
-            <div class="nso-cron-info" style="background: #fff; padding: 15px; margin: 20px 0; border: 1px solid #ccd0d4; border-left: 4px solid #2271b1;">
+            <div class="nom-cron-info" style="background: #fff; padding: 15px; margin: 20px 0; border: 1px solid #ccd0d4; border-left: 4px solid #2271b1;">
                 <h3 style="margin-top: 0;">
                     <span class="dashicons dashicons-clock" style="color: #2271b1;"></span>
-                    <?php _e('Automated Export Schedule', 'network-supplier-orders'); ?>
+                    <?php _e('Automated Export Schedule', 'network-order-management'); ?>
                 </h3>
                 <p>
                     <?php 
-                    $next_scheduled = wp_next_scheduled('nso_daily_supplier_export');
-                    $email_time = get_site_option('nso_email_time', '09:00');
+                    $next_scheduled = wp_next_scheduled('nom_daily_warehouse_export');
+                    $email_time = get_site_option('nom_email_time', '09:00');
                     if ($next_scheduled) {
                         $timezone = new DateTimeZone('Europe/Amsterdam');
                         $next_run = new DateTime('@' . $next_scheduled);
                         $next_run->setTimezone($timezone);
                         printf(
-                            __('Daily automated export is scheduled for <strong>%s (Netherlands Time)</strong>. Next run: <strong>%s</strong>', 'network-supplier-orders'),
+                            __('Daily automated export is scheduled for <strong>%s (Netherlands Time)</strong>. Next run: <strong>%s</strong>', 'network-order-management'),
                             $email_time,
                             $next_run->format('Y-m-d H:i:s')
                         );
                     } else {
-                        _e('Daily automated export is <strong>NOT scheduled</strong>. Please deactivate and reactivate the plugin.', 'network-supplier-orders');
+                        _e('Daily automated export is <strong>NOT scheduled</strong>. Please deactivate and reactivate the plugin.', 'network-order-management');
                     }
                     ?>
                 </p>
                 <p style="margin-bottom: 0;">
-                    <em><?php _e('Each enabled supplier receives <strong>orders from the previous business day</strong> via email (Monday emails include Saturday & Sunday) with a CSV file attachment saved in:', 'network-supplier-orders'); ?>
-                    <code><?php echo wp_upload_dir()['basedir']; ?>/supplier-exports/{supplier-email}/</code></em><br>
-                    <em><?php _e('Manage supplier email preferences in', 'network-supplier-orders'); ?> <a href="<?php echo network_admin_url('admin.php?page=nso-supplier-settings'); ?>"><?php _e('Email Settings', 'network-supplier-orders'); ?></a> | 
-                    <a href="<?php echo network_admin_url('admin.php?page=nso-email-schedule'); ?>"><?php _e('Change Email Time', 'network-supplier-orders'); ?></a></em>
+                    <em><?php _e('Each enabled warehouse receives <strong>orders from the previous business day</strong> via email (Monday emails include Saturday & Sunday) with a CSV file attachment saved in:', 'network-order-management'); ?>
+                    <code><?php echo wp_upload_dir()['basedir']; ?>/warehouse-exports/{warehouse-email}/</code></em><br>
+                    <em><?php _e('Manage warehouse email preferences in', 'network-order-management'); ?> <a href="<?php echo network_admin_url('admin.php?page=nom-warehouse-settings'); ?>"><?php _e('Email Settings', 'network-order-management'); ?></a> | 
+                    <a href="<?php echo network_admin_url('admin.php?page=nom-email-schedule'); ?>"><?php _e('Change Email Time', 'network-order-management'); ?></a></em>
                 </p>
             </div>
             
-            <div class="nso-stats">
-                <div class="nso-stat-box">
+            <div class="nom-stats">
+                <div class="nom-stat-box">
                     <h3><?php echo $total_orders; ?></h3>
-                    <p><?php _e('Total Orders', 'network-supplier-orders'); ?></p>
+                    <p><?php _e('Total Orders', 'network-order-management'); ?></p>
                 </div>
-                <div class="nso-stat-box">
+                <div class="nom-stat-box">
                     <h3><?php echo $this->calculate_total_value($orders); ?></h3>
-                    <p><?php _e('Total Value', 'network-supplier-orders'); ?></p>
+                    <p><?php _e('Total Value', 'network-order-management'); ?></p>
                 </div>
-                <div class="nso-stat-box">
+                <div class="nom-stat-box">
                     <h3><?php echo $this->count_unique_products($orders); ?></h3>
-                    <p><?php _e('Unique Products', 'network-supplier-orders'); ?></p>
+                    <p><?php _e('Unique Products', 'network-order-management'); ?></p>
                 </div>
             </div>
             
-            <div class="nso-orders-table">
+            <div class="nom-orders-table">
                 <?php if (empty($orders)): ?>
-                    <p><?php _e('No orders found matching your criteria.', 'network-supplier-orders'); ?></p>
+                    <p><?php _e('No orders found matching your criteria.', 'network-order-management'); ?></p>
                 <?php else: ?>
                     <div class="tablenav top">
                         <div class="tablenav-pages">
                             <span class="displaying-num">
-                                <?php printf(__('Showing %1$d-%2$d of %3$d orders', 'network-supplier-orders'), $display_start, $display_end, $total_orders); ?>
+                                <?php printf(__('Showing %1$d-%2$d of %3$d orders', 'network-order-management'), $display_start, $display_end, $total_orders); ?>
                             </span>
                             <?php if (!empty($pagination_links)): ?>
                                 <span class="pagination-links"><?php echo implode(' ', $pagination_links); ?></span>
@@ -464,16 +464,16 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                     <table class="wp-list-table widefat fixed striped">
                         <thead>
                             <tr>
-                                <th><?php _e('Order ID', 'network-supplier-orders'); ?></th>
-                                <th><?php _e('Site', 'network-supplier-orders'); ?></th>
-                                <th><?php _e('Date', 'network-supplier-orders'); ?></th>
-                                <th><?php _e('Customer', 'network-supplier-orders'); ?></th>
-                                <th><?php _e('Product', 'network-supplier-orders'); ?></th>
-                                <th><?php _e('Supplier', 'network-supplier-orders'); ?></th>
-                                <th><?php _e('Quantity', 'network-supplier-orders'); ?></th>
-                                <th><?php _e('Total', 'network-supplier-orders'); ?></th>
-                                <th><?php _e('Status', 'network-supplier-orders'); ?></th>
-                                <th><?php _e('Actions', 'network-supplier-orders'); ?></th>
+                                <th><?php _e('Order ID', 'network-order-management'); ?></th>
+                                <th><?php _e('Site', 'network-order-management'); ?></th>
+                                <th><?php _e('Date', 'network-order-management'); ?></th>
+                                <th><?php _e('Customer', 'network-order-management'); ?></th>
+                                <th><?php _e('Product', 'network-order-management'); ?></th>
+                                <th><?php _e('Supplier', 'network-order-management'); ?></th>
+                                <th><?php _e('Quantity', 'network-order-management'); ?></th>
+                                <th><?php _e('Total', 'network-order-management'); ?></th>
+                                <th><?php _e('Status', 'network-order-management'); ?></th>
+                                <th><?php _e('Actions', 'network-order-management'); ?></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -493,19 +493,19 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <?php if (!empty($order_data['suppliers'])): ?>
-                                            <?php foreach ($order_data['suppliers'] as $supplier): ?>
-                                                <span class="nso-supplier-badge"><?php echo esc_html($supplier); ?></span><br>
+                                        <?php if (!empty($order_data['warehouses'])): ?>
+                                            <?php foreach ($order_data['warehouses'] as $warehouse): ?>
+                                                <span class="nom-warehouse-badge"><?php echo esc_html($warehouse); ?></span><br>
                                             <?php endforeach; ?>
                                         <?php else: ?>
-                                            <span class="nso-no-supplier"><?php _e('No supplier', 'network-supplier-orders'); ?></span>
+                                            <span class="nom-no-warehouse"><?php _e('No warehouse', 'network-order-management'); ?></span>
                                         <?php endif; ?>
                                     </td>
                                     <td><?php echo esc_html($order_data['quantity']); ?></td>
                                     <td><?php echo $order_data['total']; ?></td>
                                     <td><span class="order-status status-<?php echo esc_attr($order_data['status']); ?>"><?php echo esc_html($order_data['status_name']); ?></span></td>
                                     <td>
-                                        <a href="<?php echo esc_url($order_data['order_url']); ?>" class="button button-small" target="_blank"><?php _e('View', 'network-supplier-orders'); ?></a>
+                                        <a href="<?php echo esc_url($order_data['order_url']); ?>" class="button button-small" target="_blank"><?php _e('View', 'network-order-management'); ?></a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -515,7 +515,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                     <div class="tablenav bottom">
                         <div class="tablenav-pages">
                             <span class="displaying-num">
-                                <?php printf(__('Showing %1$d-%2$d of %3$d orders', 'network-supplier-orders'), $display_start, $display_end, $total_orders); ?>
+                                <?php printf(__('Showing %1$d-%2$d of %3$d orders', 'network-order-management'), $display_start, $display_end, $total_orders); ?>
                             </span>
                             <?php if (!empty($pagination_links)): ?>
                                 <span class="pagination-links"><?php echo implode(' ', $pagination_links); ?></span>
@@ -528,7 +528,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         <?php
     }
     
-    private function get_all_orders($supplier_filter = '', $site_filter = 0, $status_filter = '', $date_from = '', $date_to = '') {
+    private function get_all_orders($warehouse_filter = '', $site_filter = 0, $status_filter = '', $date_from = '', $date_to = '') {
         $all_orders = array();
         $sites = $this->get_main_sites();
         
@@ -573,27 +573,27 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                         continue;
                     }
                     
-                    // Get suppliers from taxonomy
-                    $product_suppliers = wp_get_post_terms($product_id, 'supplier', array('fields' => 'all'));
+                    // Get warehouses from taxonomy
+                    $product_warehouses = wp_get_post_terms($product_id, 'warehouse', array('fields' => 'all'));
                     
-                    // Filter by supplier if set
-                    if ($supplier_filter) {
-                        $has_supplier = false;
-                        foreach ($product_suppliers as $ps) {
-                            if ($ps->slug === $supplier_filter) {
-                                $has_supplier = true;
+                    // Filter by warehouse if set
+                    if ($warehouse_filter) {
+                        $has_warehouse = false;
+                        foreach ($product_warehouses as $ps) {
+                            if ($ps->slug === $warehouse_filter) {
+                                $has_warehouse = true;
                                 break;
                             }
                         }
-                        if (!$has_supplier) {
+                        if (!$has_warehouse) {
                             continue;
                         }
                     }
                     
-                    // Get supplier names
-                    $supplier_names = array();
-                    foreach ($product_suppliers as $ps) {
-                        $supplier_names[] = $ps->name;
+                    // Get warehouse names
+                    $warehouse_names = array();
+                    foreach ($product_warehouses as $ps) {
+                        $warehouse_names[] = $ps->name;
                     }
                     
                     $customer_first_name = $order->get_billing_first_name();
@@ -615,7 +615,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                         'product_sku' => $product->get_sku(),
                         'product_attributes' => $this->format_item_attributes($item),
                         'product_attribute_pairs' => $this->get_item_attribute_pairs($item),
-                        'suppliers' => $supplier_names,
+                        'warehouses' => $warehouse_names,
                         'quantity' => $item->get_quantity(),
                         'total' => wc_price($item->get_total()),
                         'total_raw' => $item->get_total(),
@@ -646,7 +646,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
     /**
      * Get all orders by datetime (for reporting window filtering)
      */
-    private function get_all_orders_by_datetime($supplier_filter = '', $datetime_from = '', $datetime_to = '') {
+    private function get_all_orders_by_datetime($warehouse_filter = '', $datetime_from = '', $datetime_to = '') {
         $all_orders = array();
         $sites = $this->get_main_sites();
         
@@ -680,27 +680,27 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                         continue;
                     }
                     
-                    // Get suppliers from taxonomy
-                    $product_suppliers = wp_get_post_terms($product_id, 'supplier', array('fields' => 'all'));
+                    // Get warehouses from taxonomy
+                    $product_warehouses = wp_get_post_terms($product_id, 'warehouse', array('fields' => 'all'));
                     
-                    // Filter by supplier if set
-                    if ($supplier_filter) {
-                        $has_supplier = false;
-                        foreach ($product_suppliers as $ps) {
-                            if ($ps->slug === $supplier_filter) {
-                                $has_supplier = true;
+                    // Filter by warehouse if set
+                    if ($warehouse_filter) {
+                        $has_warehouse = false;
+                        foreach ($product_warehouses as $ps) {
+                            if ($ps->slug === $warehouse_filter) {
+                                $has_warehouse = true;
                                 break;
                             }
                         }
-                        if (!$has_supplier) {
+                        if (!$has_warehouse) {
                             continue;
                         }
                     }
                     
-                    // Get supplier names
-                    $supplier_names = array();
-                    foreach ($product_suppliers as $ps) {
-                        $supplier_names[] = $ps->name;
+                    // Get warehouse names
+                    $warehouse_names = array();
+                    foreach ($product_warehouses as $ps) {
+                        $warehouse_names[] = $ps->name;
                     }
                     
                     $customer_first_name = $order->get_billing_first_name();
@@ -722,7 +722,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                         'product_sku' => $product->get_sku(),
                         'product_attributes' => $this->format_item_attributes($item),
                         'product_attribute_pairs' => $this->get_item_attribute_pairs($item),
-                        'suppliers' => $supplier_names,
+                        'warehouses' => $warehouse_names,
                         'quantity' => $item->get_quantity(),
                         'total' => wc_price($item->get_total()),
                         'total_raw' => $item->get_total(),
@@ -1062,19 +1062,19 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
     }
     
     public function export_orders() {
-        check_ajax_referer('nso_export_nonce', 'nonce');
+        check_ajax_referer('nom_export_nonce', 'nonce');
         
         if (!current_user_can('manage_network')) {
             wp_send_json_error('Permission denied');
         }
         
-        $supplier = isset($_POST['supplier']) ? sanitize_text_field($_POST['supplier']) : '';
+        $warehouse = isset($_POST['warehouse']) ? sanitize_text_field($_POST['warehouse']) : '';
         $site = isset($_POST['site']) ? intval($_POST['site']) : 0;
         $status = isset($_POST['status']) ? sanitize_text_field($_POST['status']) : '';
         $date_from = isset($_POST['date_from']) ? sanitize_text_field($_POST['date_from']) : '';
         $date_to = isset($_POST['date_to']) ? sanitize_text_field($_POST['date_to']) : '';
         
-        $orders = $this->get_all_orders($supplier, $site, $status, $date_from, $date_to);
+        $orders = $this->get_all_orders($warehouse, $site, $status, $date_from, $date_to);
         
         $filename = 'network-orders-' . date('Y-m-d-His') . '.csv';
         
@@ -1136,7 +1136,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                 $order['product_sku'],
                 isset($order['product_attributes']) ? $order['product_attributes'] : '',
                 ...$this->flatten_attribute_pairs_for_csv($attribute_pairs),
-                implode(', ', $order['suppliers']),
+                implode(', ', $order['warehouses']),
                 $order['quantity'],
                 $order['total_raw'],
                 $order['status_name'],
@@ -1149,28 +1149,28 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
     }
     
     /**
-     * Create supplier folder when new supplier is added
+     * Create warehouse folder when new warehouse is added
      */
-    public function create_supplier_folder($term_id, $tt_id) {
-        $term = get_term($term_id, 'supplier');
+    public function create_warehouse_folder($term_id, $tt_id) {
+        $term = get_term($term_id, 'warehouse');
         
         if (!is_wp_error($term)) {
             // Get email from Supplier Order Email plugin meta key
-            $supplier_email = get_term_meta($term_id, 'mcisoe_supplier_email', true);
+            $warehouse_email = get_term_meta($term_id, 'mcisoe_warehouse_email', true);
             
-            if (!$supplier_email) {
+            if (!$warehouse_email) {
                 // Use slug if no email
-                $supplier_email = $term->slug;
+                $warehouse_email = $term->slug;
             }
             
             $upload_dir = wp_upload_dir();
-            $supplier_folder = $upload_dir['basedir'] . '/supplier-exports/' . sanitize_file_name($supplier_email);
+            $warehouse_folder = $upload_dir['basedir'] . '/warehouse-exports/' . sanitize_file_name($warehouse_email);
             
-            if (!file_exists($supplier_folder)) {
-                wp_mkdir_p($supplier_folder);
+            if (!file_exists($warehouse_folder)) {
+                wp_mkdir_p($warehouse_folder);
                 
                 // Create .htaccess for security
-                $htaccess = $supplier_folder . '/.htaccess';
+                $htaccess = $warehouse_folder . '/.htaccess';
                 file_put_contents($htaccess, "Deny from all\n");
             }
         }
@@ -1185,7 +1185,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
             return;
         }
 
-        if (!wp_next_scheduled('nso_daily_supplier_export')) {
+        if (!wp_next_scheduled('nom_daily_warehouse_export')) {
             $this->reschedule_cron_job();
         }
     }
@@ -1200,13 +1200,13 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         }
 
         // Remove existing schedule
-        $timestamp = wp_next_scheduled('nso_daily_supplier_export');
+        $timestamp = wp_next_scheduled('nom_daily_warehouse_export');
         if ($timestamp) {
-            wp_unschedule_event($timestamp, 'nso_daily_supplier_export');
+            wp_unschedule_event($timestamp, 'nom_daily_warehouse_export');
         }
         
         // Get configured time (default 09:00)
-        $email_time = get_site_option('nso_email_time', '09:00');
+        $email_time = get_site_option('nom_email_time', '09:00');
         
         // Schedule for configured time Netherlands time (CET/CEST)
         // Netherlands is UTC+1 (CET) or UTC+2 (CEST in summer)
@@ -1225,7 +1225,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         $target->setTimezone(new DateTimeZone('UTC'));
         $timestamp = $target->getTimestamp();
         
-        wp_schedule_event($timestamp, 'daily', 'nso_daily_supplier_export');
+        wp_schedule_event($timestamp, 'daily', 'nom_daily_warehouse_export');
     }
 
     /**
@@ -1236,16 +1236,16 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
             return;
         }
 
-        $check_flag = get_site_transient('nso_cron_check_recent');
+        $check_flag = get_site_transient('nom_cron_check_recent');
 
         if ($check_flag) {
             return;
         }
 
-        set_site_transient('nso_cron_check_recent', 1, HOUR_IN_SECONDS);
+        set_site_transient('nom_cron_check_recent', 1, HOUR_IN_SECONDS);
 
-        if (!wp_next_scheduled('nso_daily_supplier_export')) {
-            $this->log_event('Cron event missing; rescheduling daily supplier export.');
+        if (!wp_next_scheduled('nom_daily_warehouse_export')) {
+            $this->log_event('Cron event missing; rescheduling daily warehouse export.');
             $this->reschedule_cron_job();
         }
     }
@@ -1254,24 +1254,24 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
      * Deactivate cron job
      */
     public function deactivate_cron() {
-        $timestamp = wp_next_scheduled('nso_daily_supplier_export');
+        $timestamp = wp_next_scheduled('nom_daily_warehouse_export');
         if ($timestamp) {
-            wp_unschedule_event($timestamp, 'nso_daily_supplier_export');
+            wp_unschedule_event($timestamp, 'nom_daily_warehouse_export');
         }
     }
     
     /**
-     * Daily supplier export and email
+     * Daily warehouse export and email
      */
-    public function daily_supplier_export() {
-        $this->export_and_email_suppliers(null, 'automated');
+    public function daily_warehouse_export() {
+        $this->export_and_email_warehouses(null, 'automated');
     }
     
     /**
      * Manual export and email trigger
      */
     public function manual_export_email() {
-        check_ajax_referer('nso_export_nonce', 'nonce');
+        check_ajax_referer('nom_export_nonce', 'nonce');
         
         if (!current_user_can('manage_network')) {
             wp_send_json_error(array('message' => 'Permission denied'));
@@ -1286,12 +1286,12 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
             $date_range = $this->build_manual_date_range($date_from, $date_to);
 
             if (empty($date_range['send'])) {
-                $message = isset($date_range['message']) ? $date_range['message'] : __('Please provide a valid date range.', 'network-supplier-orders');
+                $message = isset($date_range['message']) ? $date_range['message'] : __('Please provide a valid date range.', 'network-order-management');
                 wp_send_json_error(array('message' => $message));
             }
         }
         
-        $result = $this->export_and_email_suppliers($date_range);
+        $result = $this->export_and_email_warehouses($date_range);
         
         if ($result['success']) {
             wp_send_json_success($result);
@@ -1301,11 +1301,11 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
     }
     
     /**
-     * Export orders for each supplier and email them
+     * Export orders for each warehouse and email them
      */
-    private function export_and_email_suppliers($date_range = null, $run_context = 'manual') {
-        $date_range = $date_range ?: $this->get_supplier_email_date_range();
-        $lock_key = 'nso_email_export_lock';
+    private function export_and_email_warehouses($date_range = null, $run_context = 'manual') {
+        $date_range = $date_range ?: $this->get_warehouse_email_date_range();
+        $lock_key = 'nom_email_export_lock';
         $lock_ttl = 15 * MINUTE_IN_SECONDS;
         $is_automated = ($run_context === 'automated');
 
@@ -1315,7 +1315,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
             if ($skip_info['skip']) {
                 return array(
                     'success' => true,
-                    'suppliers_processed' => 0,
+                    'warehouses_processed' => 0,
                     'emails_sent' => 0,
                     'emails_success' => array(),
                     'errors' => array(),
@@ -1327,7 +1327,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         if (!$date_range['send']) {
             return array(
                 'success' => true,
-                'suppliers_processed' => 0,
+                'warehouses_processed' => 0,
                 'emails_sent' => 0,
                 'emails_success' => array(),
                 'errors' => array(),
@@ -1338,33 +1338,33 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         if (get_site_transient($lock_key)) {
             return array(
                 'success' => false,
-                'suppliers_processed' => 0,
+                'warehouses_processed' => 0,
                 'emails_sent' => 0,
                 'emails_success' => array(),
-                'errors' => array('Another supplier email run is already in progress.'),
-                'message' => __('A supplier email job is already running. Please try again shortly.', 'network-supplier-orders'),
+                'errors' => array('Another warehouse email run is already in progress.'),
+                'message' => __('A warehouse email job is already running. Please try again shortly.', 'network-order-management'),
             );
         }
 
         set_site_transient($lock_key, 1, $lock_ttl);
 
         $sites = $this->get_main_sites();
-        $all_suppliers = array();
+        $all_warehouses = array();
         
-        // Collect all unique suppliers from all sites
+        // Collect all unique warehouses from all sites
         foreach ($sites as $site) {
             switch_to_blog($site->blog_id);
             
-            if (taxonomy_exists('supplier')) {
-                $site_suppliers = get_terms(array(
-                    'taxonomy' => 'supplier',
+            if (taxonomy_exists('warehouse')) {
+                $site_warehouses = get_terms(array(
+                    'taxonomy' => 'warehouse',
                     'hide_empty' => false,
                 ));
                 
-                if (!is_wp_error($site_suppliers)) {
-                    foreach ($site_suppliers as $supplier) {
-                        if (!isset($all_suppliers[$supplier->slug])) {
-                            $all_suppliers[$supplier->slug] = $supplier;
+                if (!is_wp_error($site_warehouses)) {
+                    foreach ($site_warehouses as $warehouse) {
+                        if (!isset($all_warehouses[$warehouse->slug])) {
+                            $all_warehouses[$warehouse->slug] = $warehouse;
                         }
                     }
                 }
@@ -1375,7 +1375,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         
         $results = array(
             'success' => true,
-            'suppliers_processed' => 0,
+            'warehouses_processed' => 0,
             'emails_sent' => 0,
             'emails_success' => array(),
             'errors' => array(),
@@ -1385,50 +1385,50 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         );
 
         $range_label = isset($date_range['description']) ? $date_range['description'] : 'date window not set';
-        $this->log_event(sprintf('Starting supplier email run for %s.', $range_label));
+        $this->log_event(sprintf('Starting warehouse email run for %s.', $range_label));
 
         try {
-            foreach ($all_suppliers as $supplier) {
-                $results['suppliers_processed']++;
+            foreach ($all_warehouses as $warehouse) {
+                $results['warehouses_processed']++;
                 
-                // Check if supplier email is enabled
-                if (!$this->is_supplier_email_enabled($supplier->slug)) {
-                    continue; // Skip this supplier - email disabled
+                // Check if warehouse email is enabled
+                if (!$this->is_warehouse_email_enabled($warehouse->slug)) {
+                    continue; // Skip this warehouse - email disabled
                 }
                 
-                // Get supplier email from Supplier Order Email plugin meta key
-                $supplier_email = '';
+                // Get warehouse email from Supplier Order Email plugin meta key
+                $warehouse_email = '';
                 foreach ($sites as $site) {
                     switch_to_blog($site->blog_id);
                     // Use the correct meta key from Supplier Order Email plugin
-                    $email = get_term_meta($supplier->term_id, 'mcisoe_supplier_email', true);
+                    $email = get_term_meta($warehouse->term_id, 'mcisoe_warehouse_email', true);
                     if ($email) {
-                        $supplier_email = $email;
+                        $warehouse_email = $email;
                         restore_current_blog();
                         break;
                     }
                     restore_current_blog();
                 }
                 
-                if (!$supplier_email) {
-                    $results['errors'][] = "No email found for supplier: {$supplier->name}";
+                if (!$warehouse_email) {
+                    $results['errors'][] = "No email found for warehouse: {$warehouse->name}";
                     continue;
                 }
                 
-                // Get orders for this supplier within the configured reporting window
+                // Get orders for this warehouse within the configured reporting window
                 $orders = $this->get_all_orders_by_datetime(
-                    $supplier->slug,
+                    $warehouse->slug,
                     $date_range['from'],
                     $date_range['to']
                 );
                 
                 if (empty($orders)) {
-                    // Don't treat empty orders as an error for enabled suppliers
+                    // Don't treat empty orders as an error for enabled warehouses
                     continue;
                 }
                 
                 // Create CSV file
-                $file_result = $this->create_supplier_export_file($supplier, $supplier_email, $orders);
+                $file_result = $this->create_warehouse_export_file($warehouse, $warehouse_email, $orders);
                 
                 if (!$file_result['success']) {
                     $results['errors'][] = $file_result['error'];
@@ -1436,9 +1436,9 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                 }
                 
                 // Send email
-                $email_result = $this->send_supplier_email(
-                    $supplier,
-                    $supplier_email,
+                $email_result = $this->send_warehouse_email(
+                    $warehouse,
+                    $warehouse_email,
                     $file_result['file_path'],
                     count($orders),
                     $date_range
@@ -1447,19 +1447,19 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                 if ($email_result) {
                     $results['emails_sent']++;
                     $results['emails_success'][] = array(
-                        'supplier_name' => $supplier->name,
-                        'supplier_email' => $supplier_email,
+                        'warehouse_name' => $warehouse->name,
+                        'warehouse_email' => $warehouse_email,
                         'order_count' => count($orders),
                         'file_name' => $file_result['filename'],
                         'range_description' => $date_range['description'],
                     );
                 } else {
-                    $results['errors'][] = "Failed to send email to: {$supplier->name} ({$supplier_email})";
+                    $results['errors'][] = "Failed to send email to: {$warehouse->name} ({$warehouse_email})";
                 }
             }
         } catch (Throwable $e) {
             $results['success'] = false;
-            $results['errors'][] = 'Unexpected error while emailing suppliers: ' . $e->getMessage();
+            $results['errors'][] = 'Unexpected error while emailing warehouses: ' . $e->getMessage();
             $this->log_event('Supplier email run failed: ' . $e->getMessage());
         } finally {
             delete_site_transient($lock_key);
@@ -1469,8 +1469,8 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
             }
 
             $this->log_event(sprintf(
-                'Finished supplier email run (%d suppliers processed, %d emails sent, %d errors).',
-                $results['suppliers_processed'],
+                'Finished warehouse email run (%d warehouses processed, %d emails sent, %d errors).',
+                $results['warehouses_processed'],
                 $results['emails_sent'],
                 count($results['errors'])
             ));
@@ -1494,7 +1494,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
      * Determine if the automated email for the current date window already ran
      */
     private function should_skip_automated_email_run($date_range) {
-        $state = get_site_option('nso_last_automated_supplier_email', array());
+        $state = get_site_option('nom_last_automated_warehouse_email', array());
         $current_key = $this->build_date_window_key($date_range);
 
         if (!$current_key || !is_array($state) || empty($state['window_key'])) {
@@ -1514,22 +1514,22 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         $ran_at = isset($state['ran_at']) ? $state['ran_at'] : '';
         $description = isset($date_range['description']) ? $date_range['description'] : '';
 
-        $message = __('Automated supplier emails have already been sent for this date range.', 'network-supplier-orders');
+        $message = __('Automated warehouse emails have already been sent for this date range.', 'network-order-management');
 
         if ($description && $ran_at) {
             $message = sprintf(
-                __('Automated supplier emails already sent for "%s" at %s.', 'network-supplier-orders'),
+                __('Automated warehouse emails already sent for "%s" at %s.', 'network-order-management'),
                 $description,
                 $ran_at
             );
         } elseif ($ran_at) {
             $message = sprintf(
-                __('Automated supplier emails already sent at %s for this date range.', 'network-supplier-orders'),
+                __('Automated warehouse emails already sent at %s for this date range.', 'network-order-management'),
                 $ran_at
             );
         }
 
-        $this->log_event('Skipped automated supplier email run because it already completed for this date range.');
+        $this->log_event('Skipped automated warehouse email run because it already completed for this date range.');
 
         return array(
             'skip' => true,
@@ -1548,20 +1548,20 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
             'description' => isset($date_range['description']) ? $date_range['description'] : '',
             'ran_at' => current_time('mysql'),
             'emails_sent' => isset($results['emails_sent']) ? intval($results['emails_sent']) : 0,
-            'suppliers_processed' => isset($results['suppliers_processed']) ? intval($results['suppliers_processed']) : 0,
+            'warehouses_processed' => isset($results['warehouses_processed']) ? intval($results['warehouses_processed']) : 0,
         );
 
         if (!$state['window_key']) {
             return;
         }
 
-        update_site_option('nso_last_automated_supplier_email', $state);
+        update_site_option('nom_last_automated_warehouse_email', $state);
     }
 
     /**
-     * Determine the reporting window for supplier emails
+     * Determine the reporting window for warehouse emails
      */
-    private function get_supplier_email_date_range() {
+    private function get_warehouse_email_date_range() {
         $timezone = new DateTimeZone('Europe/Amsterdam');
         $now = new DateTime('now', $timezone);
         $day_of_week = (int) $now->format('N'); // 1 (Mon) - 7 (Sun)
@@ -1569,7 +1569,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         if ($day_of_week >= 6) {
             return array(
                 'send' => false,
-                'message' => __('Supplier emails are paused on Saturdays and Sundays.', 'network-supplier-orders'),
+                'message' => __('Supplier emails are paused on Saturdays and Sundays.', 'network-order-management'),
                 'description' => '',
                 'from' => '',
                 'to' => '',
@@ -1596,7 +1596,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         }
 
         $description = sprintf(
-            __('Orders from %s to %s', 'network-supplier-orders'),
+            __('Orders from %s to %s', 'network-order-management'),
             $start->format('l Y-m-d'),
             $end->format('l Y-m-d')
         );
@@ -1679,7 +1679,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         if ($date_from === '' && $date_to === '') {
             return array(
                 'send' => false,
-                'message' => __('Please select a start and end date for this email.', 'network-supplier-orders'),
+                'message' => __('Please select a start and end date for this email.', 'network-order-management'),
             );
         }
 
@@ -1698,7 +1698,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         if ($from_date === '' || $to_date === '') {
             return array(
                 'send' => false,
-                'message' => __('Unable to read the selected dates. Please try again.', 'network-supplier-orders'),
+                'message' => __('Unable to read the selected dates. Please try again.', 'network-order-management'),
             );
         }
 
@@ -1709,21 +1709,21 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         if (!$start || !$end) {
             return array(
                 'send' => false,
-                'message' => __('Unable to read the selected dates. Please try again.', 'network-supplier-orders'),
+                'message' => __('Unable to read the selected dates. Please try again.', 'network-order-management'),
             );
         }
 
         if ($start > $end) {
             return array(
                 'send' => false,
-                'message' => __('The start date cannot be after the end date.', 'network-supplier-orders'),
+                'message' => __('The start date cannot be after the end date.', 'network-order-management'),
             );
         }
 
         $description = $start->format('Y-m-d') === $end->format('Y-m-d')
-            ? sprintf(__('Orders for %s', 'network-supplier-orders'), $start->format('l Y-m-d'))
+            ? sprintf(__('Orders for %s', 'network-order-management'), $start->format('l Y-m-d'))
             : sprintf(
-                __('Orders from %s to %s', 'network-supplier-orders'),
+                __('Orders from %s to %s', 'network-order-management'),
                 $start->format('l Y-m-d'),
                 $end->format('l Y-m-d')
             );
@@ -1737,27 +1737,27 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
     }
     
     /**
-     * Create export file for supplier (CSV format)
+     * Create export file for warehouse (CSV format)
      */
-    private function create_supplier_export_file($supplier, $supplier_email, $orders) {
+    private function create_warehouse_export_file($warehouse, $warehouse_email, $orders) {
         $upload_dir = wp_upload_dir();
-        $supplier_folder = $upload_dir['basedir'] . '/supplier-exports/' . sanitize_file_name($supplier_email);
+        $warehouse_folder = $upload_dir['basedir'] . '/warehouse-exports/' . sanitize_file_name($warehouse_email);
         
         // Create folder if it doesn't exist
-        if (!file_exists($supplier_folder)) {
-            wp_mkdir_p($supplier_folder);
-            file_put_contents($supplier_folder . '/.htaccess', "Deny from all\n");
+        if (!file_exists($warehouse_folder)) {
+            wp_mkdir_p($warehouse_folder);
+            file_put_contents($warehouse_folder . '/.htaccess', "Deny from all\n");
         }
         
         // Generate filename with date - CSV format
-        $filename = 'orders-' . sanitize_file_name($supplier->slug) . '-' . date('Y-m-d-His') . '.csv';
-        $file_path = $supplier_folder . '/' . $filename;
+        $filename = 'orders-' . sanitize_file_name($warehouse->slug) . '-' . date('Y-m-d-His') . '.csv';
+        $file_path = $warehouse_folder . '/' . $filename;
         
         // Create CSV
         $file = fopen($file_path, 'w');
         
         if (!$file) {
-            return array('success' => false, 'error' => "Could not create file for {$supplier->name}");
+            return array('success' => false, 'error' => "Could not create file for {$warehouse->name}");
         }
 
         // Match the network export encoding so Excel opens emailed files the same way
@@ -1827,34 +1827,34 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
     /**
      * Supplier settings page
      */
-    public function supplier_settings_page() {
+    public function warehouse_settings_page() {
         // Handle form submission
-        if (isset($_POST['nso_save_settings']) && check_admin_referer('nso_supplier_settings')) {
-            $enabled_suppliers = isset($_POST['enabled_suppliers']) ? $_POST['enabled_suppliers'] : array();
-            update_site_option('nso_enabled_suppliers', $enabled_suppliers);
-            echo '<div class="notice notice-success"><p>' . __('Settings saved successfully!', 'network-supplier-orders') . '</p></div>';
+        if (isset($_POST['nom_save_settings']) && check_admin_referer('nom_warehouse_settings')) {
+            $enabled_warehouses = isset($_POST['enabled_warehouses']) ? $_POST['enabled_warehouses'] : array();
+            update_site_option('nom_enabled_warehouses', $enabled_warehouses);
+            echo '<div class="notice notice-success"><p>' . __('Settings saved successfully!', 'network-order-management') . '</p></div>';
         }
         
-        // Get all suppliers
+        // Get all warehouses
         $sites = $this->get_main_sites();
-        $all_suppliers = array();
+        $all_warehouses = array();
         
         foreach ($sites as $site) {
             switch_to_blog($site->blog_id);
             
-            if (taxonomy_exists('supplier')) {
-                $site_suppliers = get_terms(array(
-                    'taxonomy' => 'supplier',
+            if (taxonomy_exists('warehouse')) {
+                $site_warehouses = get_terms(array(
+                    'taxonomy' => 'warehouse',
                     'hide_empty' => false,
                 ));
                 
-                if (!is_wp_error($site_suppliers)) {
-                    foreach ($site_suppliers as $supplier) {
-                        if (!isset($all_suppliers[$supplier->slug])) {
-                            // Get supplier email
-                            $supplier_email = get_term_meta($supplier->term_id, 'mcisoe_supplier_email', true);
-                            $supplier->email = $supplier_email ? $supplier_email : 'No email set';
-                            $all_suppliers[$supplier->slug] = $supplier;
+                if (!is_wp_error($site_warehouses)) {
+                    foreach ($site_warehouses as $warehouse) {
+                        if (!isset($all_warehouses[$warehouse->slug])) {
+                            // Get warehouse email
+                            $warehouse_email = get_term_meta($warehouse->term_id, 'mcisoe_warehouse_email', true);
+                            $warehouse->email = $warehouse_email ? $warehouse_email : 'No email set';
+                            $all_warehouses[$warehouse->slug] = $warehouse;
                         }
                     }
                 }
@@ -1863,140 +1863,140 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
             restore_current_blog();
         }
         
-        // Get current enabled suppliers
-        $enabled_suppliers = get_site_option('nso_enabled_suppliers', array());
+        // Get current enabled warehouses
+        $enabled_warehouses = get_site_option('nom_enabled_warehouses', array());
         
         ?>
         <div class="wrap">
-            <h1><?php _e('Supplier Email Settings', 'network-supplier-orders'); ?></h1>
-            <p><?php _e('Enable or disable email notifications for each supplier. Only enabled suppliers will receive daily order exports.', 'network-supplier-orders'); ?></p>
+            <h1><?php _e('Supplier Email Settings', 'network-order-management'); ?></h1>
+            <p><?php _e('Enable or disable email notifications for each warehouse. Only enabled warehouses will receive daily order exports.', 'network-order-management'); ?></p>
             
             <div class="notice notice-info inline" style="margin: 15px 0;">
                 <p>
-                    <strong><?php _e('How it works:', 'network-supplier-orders'); ?></strong>
+                    <strong><?php _e('How it works:', 'network-order-management'); ?></strong>
                 </p>
                 <ul style="margin-left: 20px; list-style: disc;">
-                    <li><?php _e('Toggle ON: Supplier will receive automated daily emails at 9:00 PM (only if they have orders that day)', 'network-supplier-orders'); ?></li>
-                    <li><?php _e('Toggle OFF: Supplier will NOT receive automated emails', 'network-supplier-orders'); ?></li>
-                    <li><?php _e('Send Email Now: Manually send today\'s orders to any supplier immediately (works regardless of toggle setting)', 'network-supplier-orders'); ?></li>
+                    <li><?php _e('Toggle ON: Supplier will receive automated daily emails at 9:00 PM (only if they have orders that day)', 'network-order-management'); ?></li>
+                    <li><?php _e('Toggle OFF: Supplier will NOT receive automated emails', 'network-order-management'); ?></li>
+                    <li><?php _e('Send Email Now: Manually send today\'s orders to any warehouse immediately (works regardless of toggle setting)', 'network-order-management'); ?></li>
                 </ul>
             </div>
             
-            <?php if (empty($all_suppliers)): ?>
+            <?php if (empty($all_warehouses)): ?>
                 <div class="notice notice-warning">
-                    <p><strong><?php _e('No suppliers found!', 'network-supplier-orders'); ?></strong></p>
+                    <p><strong><?php _e('No warehouses found!', 'network-order-management'); ?></strong></p>
                 </div>
             <?php else: ?>
                 <form method="post" action="">
-                    <?php wp_nonce_field('nso_supplier_settings'); ?>
+                    <?php wp_nonce_field('nom_warehouse_settings'); ?>
                     
-                    <table class="wp-list-table widefat fixed striped nso-supplier-table">
+                    <table class="wp-list-table widefat fixed striped nom-warehouse-table">
                         <thead>
                             <tr>
-                                <th style="width: 60px;"><?php _e('Enabled', 'network-supplier-orders'); ?></th>
-                                <th><?php _e('Supplier Name', 'network-supplier-orders'); ?></th>
-                                <th><?php _e('Email', 'network-supplier-orders'); ?></th>
-                                <th style="width: 260px;"><?php _e('Test Email', 'network-supplier-orders'); ?></th>
-                                <th style="width: 320px;"><?php _e('Send Email Now', 'network-supplier-orders'); ?></th>
+                                <th style="width: 60px;"><?php _e('Enabled', 'network-order-management'); ?></th>
+                                <th><?php _e('Supplier Name', 'network-order-management'); ?></th>
+                                <th><?php _e('Email', 'network-order-management'); ?></th>
+                                <th style="width: 260px;"><?php _e('Test Email', 'network-order-management'); ?></th>
+                                <th style="width: 320px;"><?php _e('Send Email Now', 'network-order-management'); ?></th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($all_suppliers as $supplier): ?>
+                            <?php foreach ($all_warehouses as $warehouse): ?>
                                 <tr>
-                                    <td class="nso-center-cell">
-                                        <label class="nso-toggle-switch">
+                                    <td class="nom-center-cell">
+                                        <label class="nom-toggle-switch">
                                             <input 
                                                 type="checkbox" 
-                                                name="enabled_suppliers[]" 
-                                                value="<?php echo esc_attr($supplier->slug); ?>"
-                                                <?php checked(in_array($supplier->slug, $enabled_suppliers)); ?>
+                                                name="enabled_warehouses[]" 
+                                                value="<?php echo esc_attr($warehouse->slug); ?>"
+                                                <?php checked(in_array($warehouse->slug, $enabled_warehouses)); ?>
                                             >
-                                            <span class="nso-toggle-slider"></span>
+                                            <span class="nom-toggle-slider"></span>
                                         </label>
                                     </td>
-                                    <td><strong><?php echo esc_html($supplier->name); ?></strong></td>
-                                    <td><?php echo esc_html($supplier->email); ?></td>
-                                    <?php if ($supplier->email && $supplier->email !== 'No email set'): ?>
-                                        <td class="nso-test-email-cell">
-                                            <div class="nso-test-email-block">
-                                                <span class="nso-field-label"><?php _e('Test email recipient', 'network-supplier-orders'); ?></span>
-                                                <div class="nso-test-email-actions">
+                                    <td><strong><?php echo esc_html($warehouse->name); ?></strong></td>
+                                    <td><?php echo esc_html($warehouse->email); ?></td>
+                                    <?php if ($warehouse->email && $warehouse->email !== 'No email set'): ?>
+                                        <td class="nom-test-email-cell">
+                                            <div class="nom-test-email-block">
+                                                <span class="nom-field-label"><?php _e('Test email recipient', 'network-order-management'); ?></span>
+                                                <div class="nom-test-email-actions">
                                                     <input
                                                         type="email"
-                                                        class="regular-text nso-test-email"
-                                                        placeholder="<?php esc_attr_e('you@example.com', 'network-supplier-orders'); ?>"
+                                                        class="regular-text nom-test-email"
+                                                        placeholder="<?php esc_attr_e('you@example.com', 'network-order-management'); ?>"
                                                     >
                                                     <button
                                                         type="button"
-                                                        class="button nso-send-test-email"
-                                                        data-supplier-slug="<?php echo esc_attr($supplier->slug); ?>"
-                                                        data-supplier-name="<?php echo esc_attr($supplier->name); ?>"
+                                                        class="button nom-send-test-email"
+                                                        data-warehouse-slug="<?php echo esc_attr($warehouse->slug); ?>"
+                                                        data-warehouse-name="<?php echo esc_attr($warehouse->name); ?>"
                                                     >
                                                         <span class="dashicons dashicons-admin-site-alt3"></span>
-                                                        <?php _e('Send Test Email', 'network-supplier-orders'); ?>
+                                                        <?php _e('Send Test Email', 'network-order-management'); ?>
                                                     </button>
                                                 </div>
-                                                <p class="nso-help-text"><?php _e('Preview the export in your inbox. Respects the optional date range.', 'network-supplier-orders'); ?></p>
+                                                <p class="nom-help-text"><?php _e('Preview the export in your inbox. Respects the optional date range.', 'network-order-management'); ?></p>
                                             </div>
                                         </td>
-                                        <td class="nso-send-now-cell">
-                                            <div class="nso-date-inputs">
+                                        <td class="nom-send-now-cell">
+                                            <div class="nom-date-inputs">
                                                 <label>
-                                                    <?php _e('From', 'network-supplier-orders'); ?>
+                                                    <?php _e('From', 'network-order-management'); ?>
                                                     <input 
                                                         type="date" 
-                                                        class="nso-manual-range-from" 
-                                                        name="manual_from_<?php echo esc_attr($supplier->slug); ?>"
+                                                        class="nom-manual-range-from" 
+                                                        name="manual_from_<?php echo esc_attr($warehouse->slug); ?>"
                                                     >
                                                     <input
                                                         type="time"
-                                                        class="nso-manual-range-from-time"
-                                                        name="manual_from_time_<?php echo esc_attr($supplier->slug); ?>"
+                                                        class="nom-manual-range-from-time"
+                                                        name="manual_from_time_<?php echo esc_attr($warehouse->slug); ?>"
                                                         step="60"
                                                     >
                                                 </label>
                                                 <label>
-                                                    <?php _e('To', 'network-supplier-orders'); ?>
+                                                    <?php _e('To', 'network-order-management'); ?>
                                                     <input 
                                                         type="date" 
-                                                        class="nso-manual-range-to" 
-                                                        name="manual_to_<?php echo esc_attr($supplier->slug); ?>"
+                                                        class="nom-manual-range-to" 
+                                                        name="manual_to_<?php echo esc_attr($warehouse->slug); ?>"
                                                     >
                                                     <input
                                                         type="time"
-                                                        class="nso-manual-range-to-time"
-                                                        name="manual_to_time_<?php echo esc_attr($supplier->slug); ?>"
+                                                        class="nom-manual-range-to-time"
+                                                        name="manual_to_time_<?php echo esc_attr($warehouse->slug); ?>"
                                                         step="60"
                                                     >
                                                 </label>
                                             </div>
-                                            <div class="nso-send-button-row">
+                                            <div class="nom-send-button-row">
                                                 <button 
                                                     type="button" 
-                                                    class="button button-secondary nso-send-individual-email" 
-                                                    data-supplier-slug="<?php echo esc_attr($supplier->slug); ?>"
-                                                    data-supplier-name="<?php echo esc_attr($supplier->name); ?>"
+                                                    class="button button-secondary nom-send-individual-email" 
+                                                    data-warehouse-slug="<?php echo esc_attr($warehouse->slug); ?>"
+                                                    data-warehouse-name="<?php echo esc_attr($warehouse->name); ?>"
                                                 >
                                                     <span class="dashicons dashicons-email"></span>
-                                                    <?php _e('Send Email Now', 'network-supplier-orders'); ?>
+                                                    <?php _e('Send Email Now', 'network-order-management'); ?>
                                                 </button>
-                                                <span class="nso-email-status" data-supplier="<?php echo esc_attr($supplier->slug); ?>" style="display: none;"></span>
+                                                <span class="nom-email-status" data-warehouse="<?php echo esc_attr($warehouse->slug); ?>" style="display: none;"></span>
                                             </div>
-                                            <div class="nso-manual-email-note">
-                                                <?php _e('Leave dates empty to use the default previous-business-day window. Use the test email to receive the export yourself without emailing the supplier.', 'network-supplier-orders'); ?>
+                                            <div class="nom-manual-email-note">
+                                                <?php _e('Leave dates empty to use the default previous-business-day window. Use the test email to receive the export yourself without emailing the warehouse.', 'network-order-management'); ?>
                                             </div>
                                         </td>
                                     <?php else: ?>
-                                        <td class="nso-test-email-cell nso-disabled-cell">
-                                            <span class="nso-no-email"><?php _e('No email configured', 'network-supplier-orders'); ?></span>
-                                            <p class="nso-help-text"><?php _e('Add an email to enable testing for this supplier.', 'network-supplier-orders'); ?></p>
+                                        <td class="nom-test-email-cell nom-disabled-cell">
+                                            <span class="nom-no-email"><?php _e('No email configured', 'network-order-management'); ?></span>
+                                            <p class="nom-help-text"><?php _e('Add an email to enable testing for this warehouse.', 'network-order-management'); ?></p>
                                         </td>
-                                        <td class="nso-send-now-cell nso-disabled-cell">
+                                        <td class="nom-send-now-cell nom-disabled-cell">
                                             <button type="button" class="button button-secondary" disabled>
                                                 <span class="dashicons dashicons-email"></span>
-                                                <?php _e('Send Email Now', 'network-supplier-orders'); ?>
+                                                <?php _e('Send Email Now', 'network-order-management'); ?>
                                             </button>
-                                            <p class="nso-help-text"><?php _e('Set an email address first.', 'network-supplier-orders'); ?></p>
+                                            <p class="nom-help-text"><?php _e('Set an email address first.', 'network-order-management'); ?></p>
                                         </td>
                                     <?php endif; ?>
                                 </tr>
@@ -2005,28 +2005,28 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                     </table>
                     
                     <p class="submit">
-                        <button type="submit" name="nso_save_settings" class="button button-primary">
-                            <?php _e('Save Settings', 'network-supplier-orders'); ?>
+                        <button type="submit" name="nom_save_settings" class="button button-primary">
+                            <?php _e('Save Settings', 'network-order-management'); ?>
                         </button>
                     </p>
                 </form>
             <?php endif; ?>
             
             <style>
-                .nso-toggle-switch {
+                .nom-toggle-switch {
                     position: relative;
                     display: inline-block;
                     width: 50px;
                     height: 24px;
                 }
                 
-                .nso-toggle-switch input {
+                .nom-toggle-switch input {
                     opacity: 0;
                     width: 0;
                     height: 0;
                 }
                 
-                .nso-toggle-slider {
+                .nom-toggle-slider {
                     position: absolute;
                     cursor: pointer;
                     top: 0;
@@ -2038,7 +2038,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                     border-radius: 24px;
                 }
                 
-                .nso-toggle-slider:before {
+                .nom-toggle-slider:before {
                     position: absolute;
                     content: "";
                     height: 18px;
@@ -2050,75 +2050,75 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                     border-radius: 50%;
                 }
                 
-                .nso-toggle-switch input:checked + .nso-toggle-slider {
+                .nom-toggle-switch input:checked + .nom-toggle-slider {
                     background-color: #2271b1;
                 }
                 
-                .nso-toggle-switch input:checked + .nso-toggle-slider:before {
+                .nom-toggle-switch input:checked + .nom-toggle-slider:before {
                     transform: translateX(26px);
                 }
 
-                .nso-supplier-table {
+                .nom-warehouse-table {
                     table-layout: fixed;
                 }
 
-                .nso-supplier-table th,
-                .nso-supplier-table td {
+                .nom-warehouse-table th,
+                .nom-warehouse-table td {
                     vertical-align: top;
                 }
 
-                .nso-supplier-table th:nth-child(1) {
+                .nom-warehouse-table th:nth-child(1) {
                     width: 70px;
                 }
 
-                .nso-supplier-table th:nth-child(4) {
+                .nom-warehouse-table th:nth-child(4) {
                     width: 260px;
                 }
 
-                .nso-supplier-table th:nth-child(5) {
+                .nom-warehouse-table th:nth-child(5) {
                     width: 320px;
                 }
 
-                .nso-center-cell {
+                .nom-center-cell {
                     text-align: center;
                 }
 
-                .nso-test-email-cell,
-                .nso-send-now-cell {
+                .nom-test-email-cell,
+                .nom-send-now-cell {
                     padding-top: 14px;
                 }
 
-                .nso-test-email-block,
-                .nso-send-now-cell {
+                .nom-test-email-block,
+                .nom-send-now-cell {
                     display: flex;
                     flex-direction: column;
                     gap: 8px;
                 }
 
-                .nso-field-label {
+                .nom-field-label {
                     font-weight: 600;
                     font-size: 12px;
                     color: #333;
                 }
 
-                .nso-test-email-actions {
+                .nom-test-email-actions {
                     display: flex;
                     flex-wrap: wrap;
                     gap: 8px;
                     align-items: center;
                 }
 
-                .nso-test-email-actions .regular-text {
+                .nom-test-email-actions .regular-text {
                     min-width: 200px;
                 }
 
-                .nso-date-inputs {
+                .nom-date-inputs {
                     display: flex;
                     gap: 10px;
                     flex-wrap: wrap;
                 }
 
-                .nso-date-inputs label {
+                .nom-date-inputs label {
                     display: flex;
                     flex-direction: column;
                     font-size: 12px;
@@ -2126,50 +2126,50 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                     gap: 4px;
                 }
 
-                .nso-date-inputs input[type="date"] {
+                .nom-date-inputs input[type="date"] {
                     min-width: 140px;
                 }
 
-                .nso-date-inputs input[type="time"] {
+                .nom-date-inputs input[type="time"] {
                     min-width: 120px;
                 }
 
-                .nso-send-button-row {
+                .nom-send-button-row {
                     display: flex;
                     align-items: center;
                     gap: 10px;
                     flex-wrap: wrap;
                 }
 
-                .nso-email-status {
+                .nom-email-status {
                     display: none;
                     margin-left: 0;
                 }
 
-                .nso-manual-email-note,
-                .nso-help-text {
+                .nom-manual-email-note,
+                .nom-help-text {
                     font-size: 11px;
                     color: #555;
                     margin: 0;
                     line-height: 1.5;
                 }
 
-                .nso-disabled-cell {
+                .nom-disabled-cell {
                     background: #f6f7f9;
                     color: #7a7a7a;
                 }
 
-                .nso-disabled-cell .button[disabled] {
+                .nom-disabled-cell .button[disabled] {
                     opacity: 0.6;
                 }
 
-                .nso-no-email {
+                .nom-no-email {
                     font-weight: 600;
                     color: #d63638;
                 }
 
                 @media screen and (max-width: 1100px) {
-                    .nso-supplier-table {
+                    .nom-warehouse-table {
                         display: block;
                         overflow-x: auto;
                     }
@@ -2184,14 +2184,14 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
      */
     public function email_schedule_page() {
         // Handle form submission
-        if (isset($_POST['nso_save_schedule']) && check_admin_referer('nso_email_schedule')) {
+        if (isset($_POST['nom_save_schedule']) && check_admin_referer('nom_email_schedule')) {
             $email_time = isset($_POST['email_time']) ? sanitize_text_field($_POST['email_time']) : '09:00';
             $disable_wp_cron = isset($_POST['disable_wp_cron']) ? true : false;
             
             // Validate time format (HH:MM)
             if (preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $email_time)) {
-                update_site_option('nso_email_time', $email_time);
-                update_site_option('nso_disable_wp_cron', $disable_wp_cron);
+                update_site_option('nom_email_time', $email_time);
+                update_site_option('nom_disable_wp_cron', $disable_wp_cron);
                 
                 if ($disable_wp_cron) {
                     $this->unschedule_cron_job();
@@ -2200,41 +2200,41 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                     $this->reschedule_cron_job();
                 }
                 
-                echo '<div class="notice notice-success"><p>' . __('Email schedule updated successfully!', 'network-supplier-orders') . '</p></div>';
+                echo '<div class="notice notice-success"><p>' . __('Email schedule updated successfully!', 'network-order-management') . '</p></div>';
             } else {
-                echo '<div class="notice notice-error"><p>' . __('Invalid time format. Please use HH:MM format (e.g., 09:00)', 'network-supplier-orders') . '</p></div>';
+                echo '<div class="notice notice-error"><p>' . __('Invalid time format. Please use HH:MM format (e.g., 09:00)', 'network-order-management') . '</p></div>';
             }
         }
         
-        $email_time = get_site_option('nso_email_time', '09:00');
-        $next_scheduled = wp_next_scheduled('nso_daily_supplier_export');
+        $email_time = get_site_option('nom_email_time', '09:00');
+        $next_scheduled = wp_next_scheduled('nom_daily_warehouse_export');
         $cron_disabled = $this->is_wp_cron_disabled();
         $webhook_key = $this->get_webhook_key();
         $webhook_url = esc_url(add_query_arg(
             array('key' => $webhook_key),
-            rest_url('nso/v1/email-suppliers')
+            rest_url('nom/v1/email-warehouses')
         ));
         
         ?>
         <div class="wrap">
-            <h1><?php _e('Automated Email Schedule', 'network-supplier-orders'); ?></h1>
-            <p><?php _e('Configure the time when automated supplier emails will be sent daily (Netherlands Time - Europe/Amsterdam).', 'network-supplier-orders'); ?></p>
+            <h1><?php _e('Automated Email Schedule', 'network-order-management'); ?></h1>
+            <p><?php _e('Configure the time when automated warehouse emails will be sent daily (Netherlands Time - Europe/Amsterdam).', 'network-order-management'); ?></p>
             
             <div class="notice notice-info inline" style="margin: 15px 0;">
                 <p>
-                    <strong><?php _e('How it works:', 'network-supplier-orders'); ?></strong>
+                    <strong><?php _e('How it works:', 'network-order-management'); ?></strong>
                 </p>
                 <ul style="margin-left: 20px; list-style: disc;">
-                    <li><?php _e('Set your preferred time for automated emails', 'network-supplier-orders'); ?></li>
-                    <li><?php _e('Time is in Netherlands timezone (Europe/Amsterdam)', 'network-supplier-orders'); ?></li>
-                    <li><?php _e('Emails run Monday through Friday at the selected time (Monday covers Saturday & Sunday orders; Tuesday-Friday cover the previous day)', 'network-supplier-orders'); ?></li>
-                    <li><?php _e('Use 24-hour format (e.g., 09:00 for 9 AM, 21:00 for 9 PM)', 'network-supplier-orders'); ?></li>
+                    <li><?php _e('Set your preferred time for automated emails', 'network-order-management'); ?></li>
+                    <li><?php _e('Time is in Netherlands timezone (Europe/Amsterdam)', 'network-order-management'); ?></li>
+                    <li><?php _e('Emails run Monday through Friday at the selected time (Monday covers Saturday & Sunday orders; Tuesday-Friday cover the previous day)', 'network-order-management'); ?></li>
+                    <li><?php _e('Use 24-hour format (e.g., 09:00 for 9 AM, 21:00 for 9 PM)', 'network-order-management'); ?></li>
                 </ul>
             </div>
             
             <?php if ($cron_disabled): ?>
                 <div class="notice notice-warning inline">
-                    <p><strong><?php _e('WordPress cron is disabled for supplier emails. Only external/manual triggers will run emails.', 'network-supplier-orders'); ?></strong></p>
+                    <p><strong><?php _e('WordPress cron is disabled for warehouse emails. Only external/manual triggers will run emails.', 'network-order-management'); ?></strong></p>
                 </div>
             <?php elseif ($next_scheduled): ?>
                 <div class="notice notice-success inline">
@@ -2244,7 +2244,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                         $next_run = new DateTime('@' . $next_scheduled);
                         $next_run->setTimezone($timezone);
                         printf(
-                            __('Next scheduled email: <strong>%s</strong>', 'network-supplier-orders'),
+                            __('Next scheduled email: <strong>%s</strong>', 'network-order-management'),
                             $next_run->format('l, F j, Y \a\t H:i:s')
                         );
                         ?>
@@ -2252,31 +2252,31 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                 </div>
             <?php else: ?>
                 <div class="notice notice-warning inline">
-                    <p><strong><?php _e('No automated email scheduled! Please save the schedule below to activate it.', 'network-supplier-orders'); ?></strong></p>
+                    <p><strong><?php _e('No automated email scheduled! Please save the schedule below to activate it.', 'network-order-management'); ?></strong></p>
                 </div>
             <?php endif; ?>
 
             <div class="notice notice-info inline" style="margin: 15px 0;">
                 <p>
-                    <strong><?php _e('External trigger URL', 'network-supplier-orders'); ?></strong><br>
+                    <strong><?php _e('External trigger URL', 'network-order-management'); ?></strong><br>
                     <?php printf(
-                        __('Ping this URL (GET) to run the enabled supplier email job immediately: <code>%s</code>', 'network-supplier-orders'),
+                        __('Ping this URL (GET) to run the enabled warehouse email job immediately: <code>%s</code>', 'network-order-management'),
                         $webhook_url
                     ); ?>
                 </p>
                 <p style="margin-top: 8px;">
-                    <?php _e('Optional query params: date_from=YYYY-MM-DD & date_to=YYYY-MM-DD to override the default date window. Keep this URL secret and rotate the key in the database if needed.', 'network-supplier-orders'); ?>
+                    <?php _e('Optional query params: date_from=YYYY-MM-DD & date_to=YYYY-MM-DD to override the default date window. Keep this URL secret and rotate the key in the database if needed.', 'network-order-management'); ?>
                 </p>
             </div>
             
             <form method="post" action="" style="margin-top: 20px;">
-                <?php wp_nonce_field('nso_email_schedule'); ?>
+                <?php wp_nonce_field('nom_email_schedule'); ?>
                 
                 <table class="form-table">
                     <tbody>
                         <tr>
                             <th scope="row">
-                                <label for="email_time"><?php _e('Email Time', 'network-supplier-orders'); ?></label>
+                                <label for="email_time"><?php _e('Email Time', 'network-order-management'); ?></label>
                             </th>
                             <td>
                                 <input 
@@ -2288,13 +2288,13 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                                     required
                                 >
                                 <p class="description">
-                                    <?php _e('Time in Netherlands timezone (Europe/Amsterdam). Use 24-hour format.', 'network-supplier-orders'); ?>
+                                    <?php _e('Time in Netherlands timezone (Europe/Amsterdam). Use 24-hour format.', 'network-order-management'); ?>
                                 </p>
                             </td>
                         </tr>
                         <tr>
                             <th scope="row">
-                                <label for="disable_wp_cron"><?php _e('Disable WP Cron Emails', 'network-supplier-orders'); ?></label>
+                                <label for="disable_wp_cron"><?php _e('Disable WP Cron Emails', 'network-order-management'); ?></label>
                             </th>
                             <td>
                                 <label>
@@ -2305,10 +2305,10 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                                         value="1" 
                                         <?php checked($cron_disabled); ?>
                                     >
-                                    <?php _e('I run supplier emails via an external cron/URL; do not schedule WordPress cron for this plugin.', 'network-supplier-orders'); ?>
+                                    <?php _e('I run warehouse emails via an external cron/URL; do not schedule WordPress cron for this plugin.', 'network-order-management'); ?>
                                 </label>
                                 <p class="description">
-                                    <?php _e('When enabled, the plugin will not schedule or run its daily WP cron job. Use the external URL above to trigger emails on your own schedule.', 'network-supplier-orders'); ?>
+                                    <?php _e('When enabled, the plugin will not schedule or run its daily WP cron job. Use the external URL above to trigger emails on your own schedule.', 'network-order-management'); ?>
                                 </p>
                             </td>
                         </tr>
@@ -2316,42 +2316,42 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                 </table>
                 
                 <p class="submit">
-                    <button type="submit" name="nso_save_schedule" class="button button-primary">
-                        <?php _e('Save Schedule & Reschedule Cron', 'network-supplier-orders'); ?>
+                    <button type="submit" name="nom_save_schedule" class="button button-primary">
+                        <?php _e('Save Schedule & Reschedule Cron', 'network-order-management'); ?>
                     </button>
                 </p>
             </form>
             
             <hr>
             
-            <h2><?php _e('Quick Time Examples', 'network-supplier-orders'); ?></h2>
+            <h2><?php _e('Quick Time Examples', 'network-order-management'); ?></h2>
             <table class="widefat" style="max-width: 600px;">
                 <thead>
                     <tr>
-                        <th><?php _e('Time', 'network-supplier-orders'); ?></th>
-                        <th><?php _e('Description', 'network-supplier-orders'); ?></th>
+                        <th><?php _e('Time', 'network-order-management'); ?></th>
+                        <th><?php _e('Description', 'network-order-management'); ?></th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
                         <td><code>09:00</code></td>
-                        <td><?php _e('9:00 AM (Default)', 'network-supplier-orders'); ?></td>
+                        <td><?php _e('9:00 AM (Default)', 'network-order-management'); ?></td>
                     </tr>
                     <tr>
                         <td><code>08:00</code></td>
-                        <td><?php _e('8:00 AM', 'network-supplier-orders'); ?></td>
+                        <td><?php _e('8:00 AM', 'network-order-management'); ?></td>
                     </tr>
                     <tr>
                         <td><code>12:00</code></td>
-                        <td><?php _e('12:00 PM (Noon)', 'network-supplier-orders'); ?></td>
+                        <td><?php _e('12:00 PM (Noon)', 'network-order-management'); ?></td>
                     </tr>
                     <tr>
                         <td><code>18:00</code></td>
-                        <td><?php _e('6:00 PM', 'network-supplier-orders'); ?></td>
+                        <td><?php _e('6:00 PM', 'network-order-management'); ?></td>
                     </tr>
                     <tr>
                         <td><code>21:00</code></td>
-                        <td><?php _e('9:00 PM', 'network-supplier-orders'); ?></td>
+                        <td><?php _e('9:00 PM', 'network-order-management'); ?></td>
                     </tr>
                 </tbody>
             </table>
@@ -2360,17 +2360,17 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
     }
     
     /**
-     * Save supplier settings via AJAX
+     * Save warehouse settings via AJAX
      */
-    public function save_supplier_settings() {
-        check_ajax_referer('nso_export_nonce', 'nonce');
+    public function save_warehouse_settings() {
+        check_ajax_referer('nom_export_nonce', 'nonce');
         
         if (!current_user_can('manage_network')) {
             wp_send_json_error(array('message' => 'Permission denied'));
         }
         
-        $enabled_suppliers = isset($_POST['enabled_suppliers']) ? $_POST['enabled_suppliers'] : array();
-        update_site_option('nso_enabled_suppliers', $enabled_suppliers);
+        $enabled_warehouses = isset($_POST['enabled_warehouses']) ? $_POST['enabled_warehouses'] : array();
+        update_site_option('nom_enabled_warehouses', $enabled_warehouses);
         
         wp_send_json_success(array('message' => 'Settings saved successfully'));
     }
@@ -2379,7 +2379,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
      * Save email schedule via AJAX
      */
     public function save_email_schedule() {
-        check_ajax_referer('nso_export_nonce', 'nonce');
+        check_ajax_referer('nom_export_nonce', 'nonce');
         
         if (!current_user_can('manage_network')) {
             wp_send_json_error(array('message' => 'Permission denied'));
@@ -2393,8 +2393,8 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
             wp_send_json_error(array('message' => 'Invalid time format'));
         }
         
-        update_site_option('nso_email_time', $email_time);
-        update_site_option('nso_disable_wp_cron', $disable_wp_cron);
+        update_site_option('nom_email_time', $email_time);
+        update_site_option('nom_disable_wp_cron', $disable_wp_cron);
         
         if ($disable_wp_cron) {
             $this->unschedule_cron_job();
@@ -2405,8 +2405,8 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         
         wp_send_json_success(array(
             'message' => $disable_wp_cron
-                ? __('Schedule saved; WP cron emails disabled (use external trigger).', 'network-supplier-orders')
-                : __('Schedule updated and cron rescheduled', 'network-supplier-orders')
+                ? __('Schedule saved; WP cron emails disabled (use external trigger).', 'network-order-management')
+                : __('Schedule updated and cron rescheduled', 'network-order-management')
         ));
     }
 
@@ -2429,16 +2429,16 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
 
         return $use_custom_range
             ? $this->build_manual_date_range($date_from_input, $date_to_input)
-            : $this->get_supplier_email_date_range();
+            : $this->get_warehouse_email_date_range();
     }
 
     /**
-     * Find a supplier term by slug across the network
+     * Find a warehouse term by slug across the network
      */
-    private function find_supplier_by_slug($supplier_slug) {
-        $supplier_slug = trim((string) $supplier_slug);
+    private function find_warehouse_by_slug($warehouse_slug) {
+        $warehouse_slug = trim((string) $warehouse_slug);
 
-        if ($supplier_slug === '') {
+        if ($warehouse_slug === '') {
             return array(null, '');
         }
 
@@ -2447,18 +2447,18 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         foreach ($sites as $site) {
             switch_to_blog($site->blog_id);
 
-            if (taxonomy_exists('supplier')) {
+            if (taxonomy_exists('warehouse')) {
                 $terms = get_terms(array(
-                    'taxonomy' => 'supplier',
-                    'slug' => $supplier_slug,
+                    'taxonomy' => 'warehouse',
+                    'slug' => $warehouse_slug,
                     'hide_empty' => false,
                 ));
 
                 if (!is_wp_error($terms) && !empty($terms)) {
-                    $supplier = $terms[0];
-                    $supplier_email = get_term_meta($supplier->term_id, 'mcisoe_supplier_email', true);
+                    $warehouse = $terms[0];
+                    $warehouse_email = get_term_meta($warehouse->term_id, 'mcisoe_warehouse_email', true);
                     restore_current_blog();
-                    return array($supplier, $supplier_email);
+                    return array($warehouse, $warehouse_email);
                 }
             }
 
@@ -2469,40 +2469,40 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
     }
 
     /**
-     * Process and send an individual supplier email (test or real)
+     * Process and send an individual warehouse email (test or real)
      */
-    private function process_individual_supplier_email($supplier_slug, $date_range, $recipient_email = '', $is_test = false) {
-        $supplier_slug = trim((string) $supplier_slug);
+    private function process_individual_warehouse_email($warehouse_slug, $date_range, $recipient_email = '', $is_test = false) {
+        $warehouse_slug = trim((string) $warehouse_slug);
 
-        if ($supplier_slug === '') {
-            return array('success' => false, 'message' => __('Supplier slug is required', 'network-supplier-orders'));
+        if ($warehouse_slug === '') {
+            return array('success' => false, 'message' => __('Supplier slug is required', 'network-order-management'));
         }
 
         if ($is_test && !is_email($recipient_email)) {
-            return array('success' => false, 'message' => __('Provide a valid test email address.', 'network-supplier-orders'));
+            return array('success' => false, 'message' => __('Provide a valid test email address.', 'network-order-management'));
         }
 
         if (!is_array($date_range) || empty($date_range['send'])) {
             $message = is_array($date_range) && !empty($date_range['message'])
                 ? $date_range['message']
-                : __('Please provide a valid date range.', 'network-supplier-orders');
+                : __('Please provide a valid date range.', 'network-order-management');
             return array('success' => false, 'message' => $message);
         }
 
-        list($supplier, $supplier_email) = $this->find_supplier_by_slug($supplier_slug);
+        list($warehouse, $warehouse_email) = $this->find_warehouse_by_slug($warehouse_slug);
 
-        if (!$supplier) {
-            return array('success' => false, 'message' => __('Supplier not found', 'network-supplier-orders'));
+        if (!$warehouse) {
+            return array('success' => false, 'message' => __('Supplier not found', 'network-order-management'));
         }
 
-        if (!$supplier_email && !$is_test) {
-            return array('success' => false, 'message' => __('No email found for this supplier', 'network-supplier-orders'));
+        if (!$warehouse_email && !$is_test) {
+            return array('success' => false, 'message' => __('No email found for this warehouse', 'network-order-management'));
         }
 
         $range_description = isset($date_range['description']) ? $date_range['description'] : '';
 
         $orders = $this->get_all_orders_by_datetime(
-            $supplier->slug,
+            $warehouse->slug,
             $date_range['from'],
             $date_range['to']
         );
@@ -2511,23 +2511,23 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
             return array(
                 'success' => false,
                 'message' => sprintf(
-                    __('No orders found for %s for this supplier', 'network-supplier-orders'),
+                    __('No orders found for %s for this warehouse', 'network-order-management'),
                     $range_description
                 )
             );
         }
 
-        $export_email = $supplier_email ? $supplier_email : $supplier->slug;
-        $file_result = $this->create_supplier_export_file($supplier, $export_email, $orders);
+        $export_email = $warehouse_email ? $warehouse_email : $warehouse->slug;
+        $file_result = $this->create_warehouse_export_file($warehouse, $export_email, $orders);
 
         if (!$file_result['success']) {
             return array('success' => false, 'message' => $file_result['error']);
         }
 
-        $recipient = $is_test ? $recipient_email : $supplier_email;
+        $recipient = $is_test ? $recipient_email : $warehouse_email;
 
-        $email_result = $this->send_supplier_email(
-            $supplier,
+        $email_result = $this->send_warehouse_email(
+            $warehouse,
             $recipient,
             $file_result['file_path'],
             count($orders),
@@ -2536,23 +2536,23 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         );
 
         if (!$email_result) {
-            return array('success' => false, 'message' => __('Failed to send email', 'network-supplier-orders'));
+            return array('success' => false, 'message' => __('Failed to send email', 'network-order-management'));
         }
 
         $recipient_label = $is_test
-            ? sprintf(__('Test email to %s (supplier %s)', 'network-supplier-orders'), $recipient, $supplier->name)
-            : sprintf(__('%s (%s)', 'network-supplier-orders'), $supplier->name, $recipient);
+            ? sprintf(__('Test email to %s (warehouse %s)', 'network-order-management'), $recipient, $warehouse->name)
+            : sprintf(__('%s (%s)', 'network-order-management'), $warehouse->name, $recipient);
 
         return array(
             'success' => true,
             'message' => sprintf(
-                __('Email sent successfully to %s with %d order(s) covering %s', 'network-supplier-orders'),
+                __('Email sent successfully to %s with %d order(s) covering %s', 'network-order-management'),
                 $recipient_label,
                 count($orders),
                 $range_description
             ),
-            'supplier_name' => $supplier->name,
-            'supplier_email' => $recipient,
+            'warehouse_name' => $warehouse->name,
+            'warehouse_email' => $recipient,
             'order_count' => count($orders),
             'file_name' => $file_result['filename'],
             'range_description' => $range_description
@@ -2563,33 +2563,33 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
      * Delay (minutes) before running queued test emails
      */
     private function get_test_email_delay_minutes() {
-        $minutes = (int) apply_filters('nso_test_email_delay_minutes', 15);
+        $minutes = (int) apply_filters('nom_test_email_delay_minutes', 15);
         return $minutes > 0 ? $minutes : 15;
     }
 
     /**
      * Queue a deferred test email job
      */
-    private function queue_test_email_job($supplier_slug, $test_email, $date_range) {
+    private function queue_test_email_job($warehouse_slug, $test_email, $date_range) {
         $delay_minutes = $this->get_test_email_delay_minutes();
         $delay_seconds = $delay_minutes * MINUTE_IN_SECONDS;
 
         $payload = array(
-            'supplier_slug' => $supplier_slug,
+            'warehouse_slug' => $warehouse_slug,
             'test_email' => $test_email,
             'date_range' => $date_range,
         );
 
         $args = array($payload);
         $scheduled = true;
-        if (!wp_next_scheduled('nso_deferred_supplier_test_email', $args)) {
-            $scheduled = wp_schedule_single_event(time() + $delay_seconds, 'nso_deferred_supplier_test_email', $args);
+        if (!wp_next_scheduled('nom_deferred_warehouse_test_email', $args)) {
+            $scheduled = wp_schedule_single_event(time() + $delay_seconds, 'nom_deferred_warehouse_test_email', $args);
         }
 
         if (!$scheduled) {
             return array(
                 'success' => false,
-                'message' => __('Unable to queue the test email. Please try again.', 'network-supplier-orders')
+                'message' => __('Unable to queue the test email. Please try again.', 'network-order-management')
             );
         }
 
@@ -2598,7 +2598,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
             'queued' => true,
             'delay_minutes' => $delay_minutes,
             'message' => sprintf(
-                __('Test email queued. The export is being generated and will be sent in about %d minutes.', 'network-supplier-orders'),
+                __('Test email queued. The export is being generated and will be sent in about %d minutes.', 'network-order-management'),
                 $delay_minutes
             ),
             'range_description' => isset($date_range['description']) ? $date_range['description'] : ''
@@ -2625,18 +2625,18 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
     /**
      * Run deferred test email jobs via WP-Cron
      */
-    public function run_deferred_supplier_test_email($payload) {
+    public function run_deferred_warehouse_test_email($payload) {
         if (!is_array($payload)) {
             $this->log_event('Deferred test email payload missing or invalid.');
             return;
         }
 
-        $supplier_slug = isset($payload['supplier_slug']) ? sanitize_text_field($payload['supplier_slug']) : '';
+        $warehouse_slug = isset($payload['warehouse_slug']) ? sanitize_text_field($payload['warehouse_slug']) : '';
         $test_email = isset($payload['test_email']) ? sanitize_email($payload['test_email']) : '';
         $date_range = isset($payload['date_range']) && is_array($payload['date_range']) ? $payload['date_range'] : array();
 
-        if ($supplier_slug === '' || $test_email === '' || !is_email($test_email)) {
-            $this->log_event('Deferred test email skipped due to missing supplier or invalid email.');
+        if ($warehouse_slug === '' || $test_email === '' || !is_email($test_email)) {
+            $this->log_event('Deferred test email skipped due to missing warehouse or invalid email.');
             return;
         }
 
@@ -2648,7 +2648,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
 
         $this->prepare_long_task();
 
-        $result = $this->process_individual_supplier_email($supplier_slug, $date_range, $test_email, true);
+        $result = $this->process_individual_warehouse_email($warehouse_slug, $date_range, $test_email, true);
 
         if (empty($result['success'])) {
             $error_message = isset($result['message']) ? $result['message'] : 'Unknown error while sending deferred test email.';
@@ -2657,23 +2657,23 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         }
 
         $this->log_event(sprintf(
-            'Deferred test email sent to %s for supplier %s.',
+            'Deferred test email sent to %s for warehouse %s.',
             $test_email,
-            $supplier_slug
+            $warehouse_slug
         ));
     }
     
     /**
-     * Send email to individual supplier
+     * Send email to individual warehouse
      */
-    public function send_individual_supplier_email() {
-        check_ajax_referer('nso_export_nonce', 'nonce');
+    public function send_individual_warehouse_email() {
+        check_ajax_referer('nom_export_nonce', 'nonce');
         
         if (!current_user_can('manage_network')) {
             wp_send_json_error(array('message' => 'Permission denied'));
         }
         
-        $supplier_slug = isset($_POST['supplier_slug']) ? sanitize_text_field($_POST['supplier_slug']) : '';
+        $warehouse_slug = isset($_POST['warehouse_slug']) ? sanitize_text_field($_POST['warehouse_slug']) : '';
         $date_from = isset($_POST['date_from']) ? sanitize_text_field($_POST['date_from']) : '';
         $date_to = isset($_POST['date_to']) ? sanitize_text_field($_POST['date_to']) : '';
         $time_from = isset($_POST['date_from_time']) ? sanitize_text_field($_POST['date_from_time']) : '';
@@ -2681,72 +2681,72 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         $test_email = isset($_POST['test_email']) ? sanitize_email($_POST['test_email']) : '';
         $use_test_email = !empty($test_email);
         
-        if (empty($supplier_slug)) {
+        if (empty($warehouse_slug)) {
             wp_send_json_error(array('message' => 'Supplier slug is required'));
         }
 
         if ($use_test_email && !is_email($test_email)) {
-            wp_send_json_error(array('message' => __('Provide a valid test email address.', 'network-supplier-orders')));
+            wp_send_json_error(array('message' => __('Provide a valid test email address.', 'network-order-management')));
         }
 
         $date_range = $this->build_individual_email_date_range($date_from, $date_to, $time_from, $time_to);
 
         if (empty($date_range['send'])) {
-            $message = isset($date_range['message']) ? $date_range['message'] : __('Please provide a valid date range.', 'network-supplier-orders');
+            $message = isset($date_range['message']) ? $date_range['message'] : __('Please provide a valid date range.', 'network-order-management');
             wp_send_json_error(array('message' => $message));
         }
 
         try {
             if ($use_test_email) {
-                list($supplier) = $this->find_supplier_by_slug($supplier_slug);
+                list($warehouse) = $this->find_warehouse_by_slug($warehouse_slug);
 
-                if (!$supplier) {
-                    wp_send_json_error(array('message' => __('Supplier not found', 'network-supplier-orders')));
+                if (!$warehouse) {
+                    wp_send_json_error(array('message' => __('Supplier not found', 'network-order-management')));
                 }
 
-                $queue_result = $this->queue_test_email_job($supplier_slug, $test_email, $date_range);
+                $queue_result = $this->queue_test_email_job($warehouse_slug, $test_email, $date_range);
 
                 if (empty($queue_result['success'])) {
-                    $message = isset($queue_result['message']) ? $queue_result['message'] : __('Unable to queue test email.', 'network-supplier-orders');
+                    $message = isset($queue_result['message']) ? $queue_result['message'] : __('Unable to queue test email.', 'network-order-management');
                     wp_send_json_error(array('message' => $message));
                 }
 
-                $queue_result['supplier_name'] = $supplier->name;
-                $queue_result['supplier_email'] = $test_email;
+                $queue_result['warehouse_name'] = $warehouse->name;
+                $queue_result['warehouse_email'] = $test_email;
                 $queue_result['order_count'] = 0;
 
                 wp_send_json_success($queue_result);
             }
 
-            $result = $this->process_individual_supplier_email($supplier_slug, $date_range);
+            $result = $this->process_individual_warehouse_email($warehouse_slug, $date_range);
 
             if (!empty($result['success'])) {
                 wp_send_json_success($result);
             }
 
-            $message = isset($result['message']) ? $result['message'] : __('Failed to send email', 'network-supplier-orders');
+            $message = isset($result['message']) ? $result['message'] : __('Failed to send email', 'network-order-management');
             wp_send_json_error(array('message' => $message));
         } catch (Throwable $e) {
-            error_log('[NSO] send_individual_supplier_email error: ' . $e->getMessage() . ' Trace: ' . $e->getTraceAsString());
+            error_log('[NSO] send_individual_warehouse_email error: ' . $e->getMessage() . ' Trace: ' . $e->getTraceAsString());
             wp_send_json_error(array('message' => 'Unexpected error: ' . $e->getMessage()));
         }
     }
     
     /**
-     * Check if supplier has email enabled
+     * Check if warehouse has email enabled
      */
-    private function is_supplier_email_enabled($supplier_slug) {
-        $enabled_suppliers = get_site_option('nso_enabled_suppliers', array());
-        return in_array($supplier_slug, $enabled_suppliers);
+    private function is_warehouse_email_enabled($warehouse_slug) {
+        $enabled_warehouses = get_site_option('nom_enabled_warehouses', array());
+        return in_array($warehouse_slug, $enabled_warehouses);
     }
 
     /**
-     * REST API route to trigger supplier emails from an external URL
+     * REST API route to trigger warehouse emails from an external URL
      */
     public function register_rest_routes() {
-        register_rest_route('nso/v1', '/email-suppliers', array(
+        register_rest_route('nom/v1', '/email-warehouses', array(
             'methods' => WP_REST_Server::READABLE,
-            'callback' => array($this, 'rest_trigger_supplier_emails'),
+            'callback' => array($this, 'rest_trigger_warehouse_emails'),
             'permission_callback' => array($this, 'rest_permission_callback'),
             'args' => array(
                 'key' => array(
@@ -2774,8 +2774,8 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
 
         if (!$provided_key || !$expected_key || !hash_equals($expected_key, $provided_key)) {
             return new WP_Error(
-                'nso_invalid_key',
-                __('Invalid or missing key for supplier email webhook.', 'network-supplier-orders'),
+                'nom_invalid_key',
+                __('Invalid or missing key for warehouse email webhook.', 'network-order-management'),
                 array('status' => 401)
             );
         }
@@ -2784,21 +2784,21 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
     }
 
     /**
-     * Handle REST request to trigger supplier emails
+     * Handle REST request to trigger warehouse emails
      */
-    public function rest_trigger_supplier_emails($request) {
+    public function rest_trigger_warehouse_emails($request) {
         $date_from = $request->get_param('date_from');
         $date_to = $request->get_param('date_to');
         $use_custom_range = !empty($date_from) || !empty($date_to);
 
         $date_range = $use_custom_range
             ? $this->build_manual_date_range($date_from, $date_to)
-            : $this->get_supplier_email_date_range();
+            : $this->get_warehouse_email_date_range();
 
         if (!$date_range['send']) {
             return rest_ensure_response(array(
                 'success' => true,
-                'suppliers_processed' => 0,
+                'warehouses_processed' => 0,
                 'emails_sent' => 0,
                 'emails_success' => array(),
                 'errors' => array(),
@@ -2808,7 +2808,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
 
         $run_context = $use_custom_range ? 'manual' : 'automated';
 
-        $result = $this->export_and_email_suppliers($date_range, $run_context);
+        $result = $this->export_and_email_warehouses($date_range, $run_context);
 
         return rest_ensure_response($result);
     }
@@ -2817,19 +2817,19 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
      * Create or fetch a persistent webhook key for external triggers
      */
     private function get_webhook_key() {
-        $key = get_site_option('nso_email_webhook_key', '');
+        $key = get_site_option('nom_email_webhook_key', '');
 
         if (!$key) {
             $key = wp_generate_password(32, false, false);
-            update_site_option('nso_email_webhook_key', $key);
-            $this->log_event('Generated new webhook key for supplier email trigger.');
+            update_site_option('nom_email_webhook_key', $key);
+            $this->log_event('Generated new webhook key for warehouse email trigger.');
         }
 
         return $key;
     }
 
     /**
-     * Write a lightweight log line to error_log and to the supplier exports folder
+     * Write a lightweight log line to error_log and to the warehouse exports folder
      */
     private function log_event($message) {
         if (!$message) {
@@ -2844,8 +2844,8 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         }
 
         $upload_dir = wp_upload_dir();
-        $log_dir = trailingslashit($upload_dir['basedir']) . 'supplier-exports';
-        $log_file = $log_dir . '/nso-email.log';
+        $log_dir = trailingslashit($upload_dir['basedir']) . 'warehouse-exports';
+        $log_file = $log_dir . '/nom-email.log';
 
         if (!file_exists($log_dir)) {
             wp_mkdir_p($log_dir);
@@ -2855,9 +2855,9 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
     }
     
     /**
-     * Send email to supplier with export file
+     * Send email to warehouse with export file
      */
-    private function send_supplier_email($supplier, $supplier_email, $file_path, $order_count, $date_range = array(), $is_test = false) {
+    private function send_warehouse_email($warehouse, $warehouse_email, $file_path, $order_count, $date_range = array(), $is_test = false) {
         $range_label = '';
 
         if (!empty($date_range['description'])) {
@@ -2865,25 +2865,25 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         } elseif (!empty($date_range['from']) && !empty($date_range['to'])) {
             $range_label = sprintf('%s - %s', $date_range['from'], $date_range['to']);
         } else {
-            $range_label = __('the latest reporting window', 'network-supplier-orders');
+            $range_label = __('the latest reporting window', 'network-order-management');
         }
 
         $subject_prefix = $is_test ? '[TEST] ' : '';
         $subject = sprintf(
-            __('%sNew Orders Export - %s - %s', 'network-supplier-orders'),
+            __('%sNew Orders Export - %s - %s', 'network-order-management'),
             $subject_prefix,
-            $supplier->name,
+            $warehouse->name,
             date('Y-m-d')
         );
         
         $message = sprintf(
-            __("Hello %s,\n\nPlease find attached the export of %d order(s) for your products.\nReporting window: %s\nSent on: %s at %s (Netherlands Time)\n%s\n\nThe order details are in the attached CSV file.\n\nBest regards,\nYour Store", 'network-supplier-orders'),
-            $supplier->name,
+            __("Hello %s,\n\nPlease find attached the export of %d order(s) for your products.\nReporting window: %s\nSent on: %s at %s (Netherlands Time)\n%s\n\nThe order details are in the attached CSV file.\n\nBest regards,\nYour Store", 'network-order-management'),
+            $warehouse->name,
             $order_count,
             $range_label,
             date('Y-m-d'),
             date('H:i'),
-            $is_test ? __("This email was sent in TEST mode to validate delivery.", 'network-supplier-orders') : ''
+            $is_test ? __("This email was sent in TEST mode to validate delivery.", 'network-order-management') : ''
         );
         
         // HTML version
@@ -2921,10 +2921,10 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                 </p>
                 <p>Best regards,<br><strong>Your Store</strong></p>
                 <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-                <p style="font-size: 12px; color: #666;">This is an automated email sent from your supplier order management system.</p>
+                <p style="font-size: 12px; color: #666;">This is an automated email sent from your warehouse order management system.</p>
             </div>
             </body></html>',
-            $supplier->name,
+            $warehouse->name,
             $order_count,
             date('Y-m-d'),
             date('H:i'),
@@ -2932,7 +2932,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
             $order_count,
             $is_test
                 ? '<p style="margin: 10px 0; padding: 12px; background: #fff8e5; border: 1px solid #f0c36d; color: #7a5a00;">'
-                    . __('TEST MODE: This email was sent to validate delivery and may not be sent to the supplier.', 'network-supplier-orders')
+                    . __('TEST MODE: This email was sent to validate delivery and may not be sent to the warehouse.', 'network-order-management')
                     . '</p>'
                 : ''
         );
@@ -2944,7 +2944,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         
         $attachments = array($file_path);
         
-        return wp_mail($supplier_email, $subject, $html_message, $headers, $attachments);
+        return wp_mail($warehouse_email, $subject, $html_message, $headers, $attachments);
     }
 }
 }
