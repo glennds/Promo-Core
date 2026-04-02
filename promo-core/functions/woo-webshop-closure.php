@@ -9,6 +9,7 @@ defined('ABSPATH') || exit;
 
 final class DS_Webshop_Closure {
     const OPTION_KEY = 'ds_webshop_closure';
+    const PAGE_SLUG  = 'close-webshop';
 
     public function __construct() {
         // Admin UI
@@ -38,13 +39,13 @@ final class DS_Webshop_Closure {
 
     /** ================== Admin Page ================== */
     public function add_admin_page() {
-        // Parent 'woocommerce' puts this submenu under WooCommerce (near "Home")
+        // Register under the Promo Core top-level menu.
         add_submenu_page(
-            'managepromo',
+            'promocore',
             'Webshop sluiten',
             'Webshop sluiten',
             'manage_options',
-            'close-webshop',
+            self::PAGE_SLUG,
             [$this, 'render_page'],
             1
         );
@@ -121,7 +122,7 @@ final class DS_Webshop_Closure {
     }
 
     public function render_page() {
-        if ( ! current_user_can('manage_woocommerce') ) {
+        if ( ! current_user_can('manage_options') ) {
             wp_die(__('You do not have permission to access this page.', 'ds-wc-closure'));
         }
 
@@ -161,7 +162,7 @@ final class DS_Webshop_Closure {
     }
 
     public function enqueue_admin_css($hook) {
-        if (isset($_GET['page']) && $_GET['page'] === 'ds-wc-closure') {
+        if (isset($_GET['page']) && $_GET['page'] === self::PAGE_SLUG) {
             // Using core .card styles; no extra CSS needed
         }
     }
@@ -285,7 +286,7 @@ final class DS_Webshop_Closure {
         $o = self::get_settings();
 
         // Admin bypass?
-        if ( ! empty($o['admin_bypass']) && current_user_can('manage_woocommerce') ) {
+        if ( ! empty($o['admin_bypass']) && current_user_can('manage_options') ) {
             return;
         }
 
@@ -313,7 +314,7 @@ final class DS_Webshop_Closure {
 
     /** ================== Admin Bar Badge ================== */
     public function admin_bar_status_badge($wp_admin_bar) {
-        if ( ! current_user_can('manage_woocommerce') ) return;
+        if ( ! current_user_can('manage_options') ) return;
 
         $status = $this->get_status();
         $dot = [
@@ -330,7 +331,7 @@ final class DS_Webshop_Closure {
         $wp_admin_bar->add_node([
             'id'    => 'ds-wc-closure-status',
             'title' => $html,
-            'href'  => admin_url('admin.php?page=ds-wc-closure'),
+            'href'  => admin_url('admin.php?page=' . self::PAGE_SLUG),
             'meta'  => ['title' => 'Webshop Closure'],
         ]);
     }

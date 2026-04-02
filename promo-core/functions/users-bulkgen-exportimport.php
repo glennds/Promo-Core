@@ -23,7 +23,7 @@ class promocore_User_Batch {
     const NONCE_EXP       = 'ds_exp_nonce';
     const META_IDENTIFIER = 'ds_identifier';
     const META_WALLET     = 'ds_wallet_balance';
-    const PAGE_CAPABILITY = 'list_users';
+    const PAGE_CAPABILITY = 'manage_options';
 
     /** Network Users: add "Identifier" column header */
     public function add_identifier_column_network( $cols ) {
