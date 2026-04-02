@@ -1,5 +1,22 @@
 .ds-optionstable {margin-top: 40px}
 .ds-optionstable h3 {margin: 10px 0}
+.ds-optionstable th:last-child,
+.ds-optionstable td:last-child {
+  width: 120px;
+  text-align: center;
+}
+
+.ds-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.ds-actions .submit {
+  margin: 0;
+  padding: 0;
+}
 
 .ds-toggle {
   position: relative;

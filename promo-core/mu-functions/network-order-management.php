@@ -23,8 +23,8 @@ if ( ! defined( 'NSO_PLUGIN_URL' ) ) {
     define( 'NSO_PLUGIN_URL', trailingslashit( plugins_url( '', NSO_PLUGIN_FILE ) ) );
 }
 
-if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
-    class Network_Supplier_Orders {
+if ( ! class_exists( 'Network_Warehouse_Orders' ) ) {
+    class Network_Warehouse_Orders {
     
     private static $instance = null;
     private $attribute_column_pairs = 5;
@@ -119,19 +119,19 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         }
 
         $labels = array(
-            'name'                       => __( 'Suppliers', 'network-order-management' ),
-            'singular_name'              => __( 'Supplier', 'network-order-management' ),
-            'menu_name'                  => __( 'Suppliers', 'network-order-management' ),
-            'all_items'                  => __( 'All Suppliers', 'network-order-management' ),
-            'parent_item'                => __( 'Parent Supplier', 'network-order-management' ),
-            'parent_item_colon'          => __( 'Parent Supplier:', 'network-order-management' ),
-            'new_item_name'              => __( 'Name of new Supplier', 'network-order-management' ),
-            'add_new_item'               => __( 'New Supplier', 'network-order-management' ),
-            'edit_item'                  => __( 'Edit Supplier', 'network-order-management' ),
-            'update_item'                => __( 'Update Supplier', 'network-order-management' ),
-            'view_item'                  => __( 'View Supplier', 'network-order-management' ),
+            'name'                       => __( 'Warehouses', 'network-order-management' ),
+            'singular_name'              => __( 'Warehouse', 'network-order-management' ),
+            'menu_name'                  => __( 'Warehouses', 'network-order-management' ),
+            'all_items'                  => __( 'All Warehouses', 'network-order-management' ),
+            'parent_item'                => __( 'Parent Warehouse', 'network-order-management' ),
+            'parent_item_colon'          => __( 'Parent Warehouse:', 'network-order-management' ),
+            'new_item_name'              => __( 'Name of new Warehouse', 'network-order-management' ),
+            'add_new_item'               => __( 'New Warehouse', 'network-order-management' ),
+            'edit_item'                  => __( 'Edit Warehouse', 'network-order-management' ),
+            'update_item'                => __( 'Update Warehouse', 'network-order-management' ),
+            'view_item'                  => __( 'View Warehouse', 'network-order-management' ),
             'separate_items_with_commas' => __( 'Separate warehouses with commas', 'network-order-management' ),
-            'search_items'               => __( 'Search Suppliers', 'network-order-management' ),
+            'search_items'               => __( 'Search Warehouses', 'network-order-management' ),
             'add_or_remove_items'        => __( 'Add or remove warehouses', 'network-order-management' ),
             'choose_from_most_used'      => __( 'Choose from the most used warehouses', 'network-order-management' ),
             'not_found'                  => __( 'No warehouses found', 'network-order-management' ),
@@ -167,7 +167,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         // Add settings submenu
         add_submenu_page(
             'nom-network-orders',
-            __('Supplier Email Settings', 'network-order-management'),
+            __('Warehouse Email Settings', 'network-order-management'),
             __('Email Settings', 'network-order-management'),
             'manage_network',
             'nom-warehouse-settings',
@@ -294,13 +294,13 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         
         ?>
         <div class="wrap">
-            <h1><?php _e('Network Orders by Supplier', 'network-order-management'); ?></h1>
+            <h1><?php _e('Network Orders by Warehouse', 'network-order-management'); ?></h1>
             
             <?php if (isset($_GET['debug'])): ?>
                 <div class="notice notice-info">
                     <p><strong>Debug Info:</strong></p>
                     <ul>
-                        <li>Suppliers found: <?php echo count($all_warehouses); ?></li>
+                        <li>Warehouses found: <?php echo count($all_warehouses); ?></li>
                         <li>Orders found: <?php echo count($orders); ?></li>
                         <li>Sites: <?php echo count($sites); ?></li>
                     </ul>
@@ -311,7 +311,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                 <div class="notice notice-warning">
                     <p>
                         <strong><?php _e('No warehouses found!', 'network-order-management'); ?></strong><br>
-                        <?php _e('Make sure the Supplier Order Email plugin is installed and warehouses are created.', 'network-order-management'); ?>
+                        <?php _e('Make sure the Warehouse Order Email plugin is installed and warehouses are created.', 'network-order-management'); ?>
                     </p>
                 </div>
             <?php endif; ?>
@@ -322,9 +322,9 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                     
                     <div class="nom-filter-row">
                         <div class="nom-filter-item">
-                            <label for="warehouse"><?php _e('Supplier:', 'network-order-management'); ?></label>
+                            <label for="warehouse"><?php _e('Warehouse:', 'network-order-management'); ?></label>
                             <select name="warehouse" id="warehouse">
-                                <option value=""><?php _e('All Suppliers', 'network-order-management'); ?></option>
+                                <option value=""><?php _e('All Warehouses', 'network-order-management'); ?></option>
                                 <?php foreach ($all_warehouses as $warehouse): ?>
                                     <option value="<?php echo esc_attr($warehouse->slug); ?>" <?php selected($warehouse_filter, $warehouse->slug); ?>>
                                         <?php echo esc_html($warehouse->name); ?>
@@ -393,7 +393,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                     <button id="nom-export-csv" class="button button-secondary"><?php _e('Export to CSV', 'network-order-management'); ?></button>
                     <button id="nom-email-warehouses" class="button button-primary" style="margin-left: 10px;">
                         <span class="dashicons dashicons-email" style="margin-top: 3px;"></span>
-                        <?php _e('Export & Email All Suppliers Now', 'network-order-management'); ?>
+                        <?php _e('Export & Email All Warehouses Now', 'network-order-management'); ?>
                     </button>
                 </div>
                 
@@ -469,7 +469,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                                 <th><?php _e('Date', 'network-order-management'); ?></th>
                                 <th><?php _e('Customer', 'network-order-management'); ?></th>
                                 <th><?php _e('Product', 'network-order-management'); ?></th>
-                                <th><?php _e('Supplier', 'network-order-management'); ?></th>
+                                <th><?php _e('Warehouse', 'network-order-management'); ?></th>
                                 <th><?php _e('Quantity', 'network-order-management'); ?></th>
                                 <th><?php _e('Total', 'network-order-management'); ?></th>
                                 <th><?php _e('Status', 'network-order-management'); ?></th>
@@ -1109,7 +1109,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                 $carry[] = 'Value #' . $i;
                 return $carry;
             }, array()),
-            'Suppliers',
+            'Warehouses',
             'Quantity',
             'Total',
             'Status',
@@ -1155,7 +1155,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         $term = get_term($term_id, 'warehouse');
         
         if (!is_wp_error($term)) {
-            // Get email from Supplier Order Email plugin meta key
+            // Get email from Warehouse Order Email plugin meta key
             $warehouse_email = get_term_meta($term_id, 'mcisoe_warehouse_email', true);
             
             if (!$warehouse_email) {
@@ -1396,11 +1396,11 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                     continue; // Skip this warehouse - email disabled
                 }
                 
-                // Get warehouse email from Supplier Order Email plugin meta key
+                // Get warehouse email from Warehouse Order Email plugin meta key
                 $warehouse_email = '';
                 foreach ($sites as $site) {
                     switch_to_blog($site->blog_id);
-                    // Use the correct meta key from Supplier Order Email plugin
+                    // Use the correct meta key from Warehouse Order Email plugin
                     $email = get_term_meta($warehouse->term_id, 'mcisoe_warehouse_email', true);
                     if ($email) {
                         $warehouse_email = $email;
@@ -1460,7 +1460,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         } catch (Throwable $e) {
             $results['success'] = false;
             $results['errors'][] = 'Unexpected error while emailing warehouses: ' . $e->getMessage();
-            $this->log_event('Supplier email run failed: ' . $e->getMessage());
+            $this->log_event('Warehouse email run failed: ' . $e->getMessage());
         } finally {
             delete_site_transient($lock_key);
 
@@ -1569,7 +1569,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         if ($day_of_week >= 6) {
             return array(
                 'send' => false,
-                'message' => __('Supplier emails are paused on Saturdays and Sundays.', 'network-order-management'),
+                'message' => __('Warehouse emails are paused on Saturdays and Sundays.', 'network-order-management'),
                 'description' => '',
                 'from' => '',
                 'to' => '',
@@ -1825,7 +1825,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
     }
     
     /**
-     * Supplier settings page
+     * Warehouse settings page
      */
     public function warehouse_settings_page() {
         // Handle form submission
@@ -1868,7 +1868,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         
         ?>
         <div class="wrap">
-            <h1><?php _e('Supplier Email Settings', 'network-order-management'); ?></h1>
+            <h1><?php _e('Warehouse Email Settings', 'network-order-management'); ?></h1>
             <p><?php _e('Enable or disable email notifications for each warehouse. Only enabled warehouses will receive daily order exports.', 'network-order-management'); ?></p>
             
             <div class="notice notice-info inline" style="margin: 15px 0;">
@@ -1876,8 +1876,8 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                     <strong><?php _e('How it works:', 'network-order-management'); ?></strong>
                 </p>
                 <ul style="margin-left: 20px; list-style: disc;">
-                    <li><?php _e('Toggle ON: Supplier will receive automated daily emails at 9:00 PM (only if they have orders that day)', 'network-order-management'); ?></li>
-                    <li><?php _e('Toggle OFF: Supplier will NOT receive automated emails', 'network-order-management'); ?></li>
+                    <li><?php _e('Toggle ON: Warehouse will receive automated daily emails at 9:00 PM (only if they have orders that day)', 'network-order-management'); ?></li>
+                    <li><?php _e('Toggle OFF: Warehouse will NOT receive automated emails', 'network-order-management'); ?></li>
                     <li><?php _e('Send Email Now: Manually send today\'s orders to any warehouse immediately (works regardless of toggle setting)', 'network-order-management'); ?></li>
                 </ul>
             </div>
@@ -1894,7 +1894,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                         <thead>
                             <tr>
                                 <th style="width: 60px;"><?php _e('Enabled', 'network-order-management'); ?></th>
-                                <th><?php _e('Supplier Name', 'network-order-management'); ?></th>
+                                <th><?php _e('Warehouse Name', 'network-order-management'); ?></th>
                                 <th><?php _e('Email', 'network-order-management'); ?></th>
                                 <th style="width: 260px;"><?php _e('Test Email', 'network-order-management'); ?></th>
                                 <th style="width: 320px;"><?php _e('Send Email Now', 'network-order-management'); ?></th>
@@ -2475,7 +2475,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         $warehouse_slug = trim((string) $warehouse_slug);
 
         if ($warehouse_slug === '') {
-            return array('success' => false, 'message' => __('Supplier slug is required', 'network-order-management'));
+            return array('success' => false, 'message' => __('Warehouse slug is required', 'network-order-management'));
         }
 
         if ($is_test && !is_email($recipient_email)) {
@@ -2492,7 +2492,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         list($warehouse, $warehouse_email) = $this->find_warehouse_by_slug($warehouse_slug);
 
         if (!$warehouse) {
-            return array('success' => false, 'message' => __('Supplier not found', 'network-order-management'));
+            return array('success' => false, 'message' => __('Warehouse not found', 'network-order-management'));
         }
 
         if (!$warehouse_email && !$is_test) {
@@ -2682,7 +2682,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
         $use_test_email = !empty($test_email);
         
         if (empty($warehouse_slug)) {
-            wp_send_json_error(array('message' => 'Supplier slug is required'));
+            wp_send_json_error(array('message' => 'Warehouse slug is required'));
         }
 
         if ($use_test_email && !is_email($test_email)) {
@@ -2701,7 +2701,7 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
                 list($warehouse) = $this->find_warehouse_by_slug($warehouse_slug);
 
                 if (!$warehouse) {
-                    wp_send_json_error(array('message' => __('Supplier not found', 'network-order-management')));
+                    wp_send_json_error(array('message' => __('Warehouse not found', 'network-order-management')));
                 }
 
                 $queue_result = $this->queue_test_email_job($warehouse_slug, $test_email, $date_range);
@@ -2950,6 +2950,6 @@ if ( ! class_exists( 'Network_Supplier_Orders' ) ) {
 }
 
 // Initialize
-if ( class_exists( 'Network_Supplier_Orders' ) ) {
-    Network_Supplier_Orders::get_instance();
+if ( class_exists( 'Network_Warehouse_Orders' ) ) {
+    Network_Warehouse_Orders::get_instance();
 }

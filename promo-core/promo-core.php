@@ -3,7 +3,7 @@
  * Plugin Name: Promo Core
  * Plugin URI: https://www.digishock.com/webdevelopment/
  * Description: Diverse functionaliteiten op maat gemaakt voor Promotie.nl - Gebruik de ingebouwde instellingenpagina's om de functies te beheren.
- * Version: beta-1.5
+ * Version: beta-1.5.1
  * Requires at least: 6.8.2
  * Requires PHP: 8.2
  * Author: Digishock
@@ -212,15 +212,15 @@ function promocore_features() {
                     <tr>
                         <td>Add site logo field in <b>Settings » General</b></td>
                         <td>
-                            <input type="hidden" value="0" name="ds_functiontoggles[site_logo]">
-                            <label class="ds-toggle"><input name="ds_functiontoggles[site_logo]" <?php checked((int) ($options['site_logo'] ?? 0), 1); ?> type="checkbox" value="1"><span class="ds-slider"></span></label>
+                            <input type="hidden" value="0" name="ds_functiontoggles[general_sitelogo_field]">
+                            <label class="ds-toggle"><input name="ds_functiontoggles[general_sitelogo_field]" <?php checked((int) ($options['general_sitelogo_field'] ?? 0), 1); ?> type="checkbox" value="1"><span class="ds-slider"></span></label>
                         </td>
                     </tr>
                     <tr>
                         <td>WebsiteNazorg.nl - Disable Gutenberg</td>
                         <td>
-                            <input type="hidden" value="0" name="ds_functiontoggles[disable_gutenberg]">
-                            <label class="ds-toggle"><input name="ds_functiontoggles[disable_gutenberg]" <?php checked((int) ($options['disable_gutenberg'] ?? 0), 1); ?> type="checkbox" value="1"><span class="ds-slider"></span></label>
+                            <input type="hidden" value="0" name="ds_functiontoggles[general_disable_gutenberg]">
+                            <label class="ds-toggle"><input name="ds_functiontoggles[general_disable_gutenberg]" <?php checked((int) ($options['general_disable_gutenberg'] ?? 0), 1); ?> type="checkbox" value="1"><span class="ds-slider"></span></label>
                         </td>
                     </tr>
                     <tr>
@@ -330,10 +330,10 @@ function promocore_features() {
                         </td>
                     </tr>
                 </tbody>
-            </table>            
+            </table>
 
 
-            <div style="display: flex; gap: 10px">
+            <div class="ds-actions">
                 <p class="submit"><button type="button" class="button" id="ds-disable-all">Alles uitschakelen</button></p>
 				<p class="submit"><button type="button" class="button" id="ds-enable-all">Alles inschakelen</button></p>
             	<?php submit_button('Wijzigingen opslaan'); ?>
@@ -370,7 +370,9 @@ function promocore_features() {
 
 // Load the page styles
 add_action('admin_enqueue_scripts', function ($hook) {
-    if ($hook !== 'toplevel_page_dscore') {return;} // Only load on this admin page
+    $page = isset($_GET['page']) ? sanitize_key(wp_unslash($_GET['page'])) : '';
+    if (!in_array($page, ['dscore', 'promocore'], true)) {return;}
+
     wp_enqueue_style(
         'admin-style',
         plugin_dir_url(__FILE__) . 'assets/admin-style.css',
