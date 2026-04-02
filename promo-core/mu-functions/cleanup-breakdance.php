@@ -12,7 +12,7 @@ add_action('admin_footer-user-new.php', function () {
     <script>
     (function () {
         function removeBreakdanceBuilderAccessSection() {
-            
+
             // Find the Breakdance permission select by its stable name attribute
             var select = document.querySelector('select[name="breakdance_permission"]');
             if (!select) return false;
