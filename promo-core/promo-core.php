@@ -3,7 +3,7 @@
  * Plugin Name: Promo Core
  * Plugin URI: https://www.digishock.com/webdevelopment/
  * Description: Diverse functionaliteiten op maat gemaakt voor Promotie.nl - Gebruik de ingebouwde instellingenpagina's om de functies te beheren.
- * Version: beta-1.5.1
+ * Version: beta-1.5.3
  * Requires at least: 6.8.2
  * Requires PHP: 8.2
  * Author: Digishock
@@ -145,14 +145,14 @@ add_action('admin_menu', function () {
         'Promo Core',               // Page title (browser tab)
         'Digishock',                // Menu title (sidebar nav)
         'manage_options',           // Capability (admins only)
-        'dscore',                   // Menu slug
+        'promocore',                // Menu slug
         'promocore_features',       // Callback to content of first submenu-item on clicking toplevel menu-item
         $icon_svg,                  // Icon
         9999                        // Menu position
     );
 
     add_submenu_page(               // First submenu-item, enable/disable features
-        'dscore',                   // Parent slug
+        'promocore',                // Parent slug
         'Functies',                 // Page title (browser tab)
         'Functies',                 // Menu title (sidebar nav)
         'manage_options',           // Capability (admins only)

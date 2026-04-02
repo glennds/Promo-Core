@@ -324,13 +324,6 @@ class promocore_User_Batch {
             'bulk-user-management',
             [ $this, 'render_bulk_page' ]
         );
-        add_users_page(
-            'Bulk user management',
-            'Bulk users',
-            self::PAGE_CAPABILITY,
-            'bulk-user-management',
-            [ $this, 'render_bulk_page' ]
-        );
     }
 
     public function render_bulk_page() {
