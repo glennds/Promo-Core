@@ -3,7 +3,7 @@
  * Plugin Name: Promo Core
  * Plugin URI: https://www.digishock.com/webdevelopment/
  * Description: Diverse functionaliteiten op maat gemaakt voor Promotie.nl - Gebruik de ingebouwde instellingenpagina's om de functies te beheren.
- * Version: 1.5.10-3
+ * Version: 1.5.11-5
  * Requires at least: 6.8.2
  * Requires PHP: 8.2
  * Author: Digishock
@@ -66,6 +66,10 @@ function dscore_is_enabled($key) {
     return isset($options[$key]) && $options[$key] === 1;
 }
 
+function dscore_get_promocore_capability() {
+    return 'manage_options';
+}
+
 // Load optional functions, ONLY if enabled in the wp-admin settings page
 dscore_require_optional('general_sitelogo_field',            'functions/general-sitelogo-field.php',            'Site logo');
 dscore_require_optional('general_disable_gutenberg',         'functions/general-disable-gutenberg.php',         'Disable Gutenberg');
@@ -97,6 +101,10 @@ add_action('admin_init', function() {
     'type' => 'array',
     'sanitize_callback' => 'dscore_sanitize_toggle_options'
     ]);
+});
+
+add_filter('option_page_capability_dscore_settings', function () {
+    return dscore_get_promocore_capability();
 });
 
 // Sanitize input from settings page, ensure all values are set and either 0 or 1
@@ -143,9 +151,9 @@ add_action('admin_menu', function () {
     add_menu_page(                  // Top-level menu-item
         'Promo Core',               // Page title (browser tab)
         'Digishock',                // Menu title (sidebar nav)
-        'manage_options',           // Capability (admins only)
+        dscore_get_promocore_capability(),
         'promocore',                // Menu slug
-        'promocore_features',       // Callback to content of first submenu-item on clicking toplevel menu-item
+        'promocore_features',
         $icon_svg,                  // Icon
         9999                        // Menu position
     );
@@ -154,7 +162,7 @@ add_action('admin_menu', function () {
         'promocore',                // Parent slug
         'Functies',                 // Page title (browser tab)
         'Functies',                 // Menu title (sidebar nav)
-        'manage_options',           // Capability (admins only)
+        dscore_get_promocore_capability(),
         'promocore',                // Slug for this item
         'promocore_features',       // Function to call for page contents
         0
@@ -164,10 +172,9 @@ add_action('admin_menu', function () {
 
 
 // --- //
-// Generate the page content
 function promocore_features() {
 
-    if (!current_user_can('manage_options')) {wp_die(__('You are not allowed to access this page.'));}
+    if (!current_user_can(dscore_get_promocore_capability())) {wp_die(__('You are not allowed to access this page.'));}
 
     // Get the current options, with defaults for any missing values to prevent undefined index notices
     $options = get_option('ds_functiontoggles', [

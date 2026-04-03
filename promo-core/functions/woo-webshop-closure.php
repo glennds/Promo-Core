@@ -16,6 +16,7 @@ final class DS_Webshop_Closure {
         add_action('admin_menu', [$this, 'add_admin_page'], 49);
         add_action('admin_init', [$this, 'register_settings']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_css']);
+        add_filter('option_page_capability_' . self::OPTION_KEY, [$this, 'settings_capability']);
 
         // Front-end redirect logic
         add_action('template_redirect', [$this, 'maybe_redirect_blocked_urls'], 1);
@@ -44,11 +45,19 @@ final class DS_Webshop_Closure {
             'promocore',
             'Webshop sluiten',
             'Webshop sluiten',
-            'manage_options',
+            $this->settings_capability(),
             self::PAGE_SLUG,
             [$this, 'render_page'],
             1
         );
+    }
+
+    public function settings_capability() {
+        if ( function_exists( 'dscore_get_promocore_capability' ) ) {
+            return dscore_get_promocore_capability();
+        }
+
+        return 'promote_users';
     }
 
     public function register_settings() {
@@ -122,7 +131,7 @@ final class DS_Webshop_Closure {
     }
 
     public function render_page() {
-        if ( ! current_user_can('manage_options') ) {
+        if ( ! current_user_can( $this->settings_capability() ) ) {
             wp_die(__('You do not have permission to access this page.', 'ds-wc-closure'));
         }
 

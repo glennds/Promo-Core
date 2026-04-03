@@ -76,6 +76,13 @@ if ( ! function_exists( 'mpc_get_builtin_min_purchase_quantity' ) ) {
 if ( ! function_exists( 'mpc_get_effective_min_quantity' ) ) {
     function mpc_get_effective_min_quantity( $product, array $cart_item = [] ): int {
         if ( $cart_item && mpc_is_bundled_cart_item( $cart_item ) ) { return 1; }
+
+        // Reuse the custom minimum-order logic when that module is enabled.
+        if ( function_exists( 'ds_get_effective_min_quantity' ) ) {
+            $min = (int) ds_get_effective_min_quantity( $product, $cart_item );
+            return $min > 0 ? $min : 1;
+        }
+
         return mpc_get_builtin_min_purchase_quantity( $product );
     }
 }

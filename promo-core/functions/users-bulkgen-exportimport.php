@@ -57,8 +57,8 @@ class promocore_User_Batch {
         add_filter( 'woocommerce_account_menu_items',         [ $this, 'wc_hide_account_items' ] );
         add_action( 'template_redirect',                      [ $this, 'wc_block_edit_account_endpoint' ] );
 
-        // Single admin page under Users
-        add_action( 'admin_menu',                             [ $this, 'add_adminpage' ] );
+        // Register after the Promo Core top-level menu so the submenu attaches correctly.
+        add_action( 'admin_menu',                             [ $this, 'add_adminpage' ], 20 );
 
         // Bulk generate + Export POST handlers
         add_action( 'admin_post_ds_bulk_generate',            [ $this, 'handle_bulk_generate' ] );
@@ -81,10 +81,7 @@ class promocore_User_Batch {
     }
 
     private static function can_access_bulk_tools(): bool {
-        return current_user_can( 'manage_options' )
-            || current_user_can( 'create_users' )
-            || current_user_can( 'promote_users' )
-            || current_user_can( self::PAGE_CAPABILITY );
+        return current_user_can( self::PAGE_CAPABILITY );
     }
 
     public function redirect_legacy_bulk_page_url() {
