@@ -43,6 +43,11 @@ if ( ! class_exists( 'Warehouse_Taxonomy' ) ) {
             // Product list filtering by warehouse in wp-admin.
             add_action( 'restrict_manage_posts', [ $this, 'add_warehouse_filter_dropdown' ] );
             add_filter( 'parse_query', [ $this, 'apply_warehouse_filter_query' ] );
+
+            // WooCommerce REST API responses do not automatically expose custom product taxonomies.
+            add_filter( 'woocommerce_rest_prepare_product_object', [ $this, 'append_rest_warehouses_to_product' ], 10, 3 );
+            add_filter( 'woocommerce_rest_prepare_product_variation_object', [ $this, 'append_rest_warehouses_to_product' ], 10, 3 );
+            add_filter( 'woocommerce_rest_prepare_shop_order_object', [ $this, 'append_rest_warehouses_to_order' ], 10, 3 );
         }
 
         public function register_taxonomy() {
@@ -225,6 +230,88 @@ if ( ! class_exists( 'Warehouse_Taxonomy' ) ) {
             }
 
             return $query;
+        }
+
+        private function get_rest_warehouse_data_for_product( $product ): array {
+            if ( is_numeric( $product ) ) {
+                $product = wc_get_product( (int) $product );
+            }
+
+            if ( ! $product || ! is_a( $product, 'WC_Product' ) || ! taxonomy_exists( self::TAXONOMY ) ) {
+                return [];
+            }
+
+            $product_id = (int) $product->get_id();
+            $terms      = $product_id > 0 ? get_the_terms( $product_id, self::TAXONOMY ) : false;
+
+            if ( $product->is_type( 'variation' ) && ( empty( $terms ) || is_wp_error( $terms ) ) ) {
+                $parent_id = (int) $product->get_parent_id();
+                $terms     = $parent_id > 0 ? get_the_terms( $parent_id, self::TAXONOMY ) : false;
+            }
+
+            if ( empty( $terms ) || is_wp_error( $terms ) ) {
+                return [];
+            }
+
+            $payload = [];
+
+            foreach ( $terms as $term ) {
+                $payload[] = [
+                    'id'          => (int) $term->term_id,
+                    'name'        => (string) $term->name,
+                    'slug'        => (string) $term->slug,
+                    'description' => (string) $term->description,
+                    'email'       => (string) get_term_meta( $term->term_id, self::META_EMAIL, true ),
+                    'custom_text' => (string) get_term_meta( $term->term_id, self::META_CUSTOM_TEXT, true ),
+                    'data_text'   => (string) get_term_meta( $term->term_id, self::META_DATA_TEXT, true ),
+                ];
+            }
+
+            return $payload;
+        }
+
+        public function append_rest_warehouses_to_product( $response, $product, $request ) {
+            if ( ! $response || ! is_object( $response ) || ! method_exists( $response, 'get_data' ) || ! method_exists( $response, 'set_data' ) ) {
+                return $response;
+            }
+
+            $data                    = $response->get_data();
+            $data[ self::TAXONOMY ]  = $this->get_rest_warehouse_data_for_product( $product );
+            $response->set_data( $data );
+
+            return $response;
+        }
+
+        public function append_rest_warehouses_to_order( $response, $order, $request ) {
+            if ( ! $response || ! is_object( $response ) || ! method_exists( $response, 'get_data' ) || ! method_exists( $response, 'set_data' ) ) {
+                return $response;
+            }
+
+            $data = $response->get_data();
+
+            if ( empty( $data['line_items'] ) || ! is_array( $data['line_items'] ) ) {
+                return $response;
+            }
+
+            foreach ( $data['line_items'] as $index => $line_item ) {
+                $variation_id = isset( $line_item['variation_id'] ) ? absint( $line_item['variation_id'] ) : 0;
+                $product_id   = isset( $line_item['product_id'] ) ? absint( $line_item['product_id'] ) : 0;
+                $product      = null;
+
+                if ( $variation_id > 0 ) {
+                    $product = wc_get_product( $variation_id );
+                }
+
+                if ( ! $product && $product_id > 0 ) {
+                    $product = wc_get_product( $product_id );
+                }
+
+                $data['line_items'][ $index ][ self::TAXONOMY ] = $this->get_rest_warehouse_data_for_product( $product );
+            }
+
+            $response->set_data( $data );
+
+            return $response;
         }
     }
 }
