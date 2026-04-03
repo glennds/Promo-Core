@@ -111,6 +111,75 @@ if ( ! class_exists( 'Network_Warehouse_Orders' ) ) {
     }
 
     /**
+     * Resolve the multisite main site ID safely across environments.
+     */
+    private function get_multisite_main_site_id() {
+        if (function_exists('get_main_site_id')) {
+            return (int) get_main_site_id();
+        }
+
+        if (function_exists('get_current_site')) {
+            $current_site = get_current_site();
+            if ($current_site && isset($current_site->blog_id)) {
+                return (int) $current_site->blog_id;
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * Return network sites for the Network Orders screen, excluding the multisite main site.
+     */
+    private function get_network_order_sites() {
+        $main_site_id = $this->get_multisite_main_site_id();
+
+        return array_values(array_filter($this->get_main_sites(), function($site) use ($main_site_id) {
+            return (int) $site->blog_id !== $main_site_id;
+        }));
+    }
+
+    /**
+     * Normalize request values into a unique array of sanitized text strings.
+     */
+    private function get_text_filter_values($source, $key) {
+        $raw_values = isset($source[$key]) ? wp_unslash($source[$key]) : array();
+        $raw_values = is_array($raw_values) ? $raw_values : array($raw_values);
+        $values = array();
+
+        foreach ($raw_values as $value) {
+            $value = sanitize_text_field($value);
+            if ($value !== '') {
+                $values[] = $value;
+            }
+        }
+
+        return array_values(array_unique($values));
+    }
+
+    /**
+     * Normalize request values into a unique array of allowed storefront site IDs.
+     */
+    private function get_site_filter_values($source, $key) {
+        $raw_values = isset($source[$key]) ? wp_unslash($source[$key]) : array();
+        $raw_values = is_array($raw_values) ? $raw_values : array($raw_values);
+        $allowed_site_ids = array_map(function($site) {
+            return (int) $site->blog_id;
+        }, $this->get_network_order_sites());
+        $allowed_lookup = array_fill_keys($allowed_site_ids, true);
+        $values = array();
+
+        foreach ($raw_values as $value) {
+            $site_id = absint($value);
+            if ($site_id > 0 && isset($allowed_lookup[$site_id])) {
+                $values[] = $site_id;
+            }
+        }
+
+        return array_values(array_unique($values));
+    }
+
+    /**
      * Ensure the warehouse taxonomy is registered for the current blog context.
      */
     private function ensure_warehouse_taxonomy() {
@@ -211,13 +280,41 @@ if ( ! class_exists( 'Network_Warehouse_Orders' ) ) {
             array(),
             file_exists($style_path) ? filemtime($style_path) : NSO_VERSION
         );
+        $script_dependencies = array('jquery');
+
+        if (wp_script_is('wc-enhanced-select', 'registered')) {
+            $script_dependencies[] = 'wc-enhanced-select';
+        } elseif (wp_script_is('selectWoo', 'registered')) {
+            $script_dependencies[] = 'selectWoo';
+        } elseif (wp_script_is('select2', 'registered')) {
+            $script_dependencies[] = 'select2';
+        }
+
         wp_enqueue_script(
             'nom-admin',
             NSO_PLUGIN_URL . $script_rel_path,
-            array('jquery'),
+            $script_dependencies,
             file_exists($script_path) ? filemtime($script_path) : NSO_VERSION,
             true
         );
+
+        if (wp_script_is('wc-enhanced-select', 'registered')) {
+            wp_enqueue_script('wc-enhanced-select');
+        } elseif (wp_script_is('selectWoo', 'registered')) {
+            wp_enqueue_script('selectWoo');
+        } elseif (wp_script_is('select2', 'registered')) {
+            wp_enqueue_script('select2');
+        }
+
+        if (wp_style_is('woocommerce_admin_styles', 'registered')) {
+            wp_enqueue_style('woocommerce_admin_styles');
+        }
+
+        if (wp_style_is('selectWoo', 'registered')) {
+            wp_enqueue_style('selectWoo');
+        } elseif (wp_style_is('select2', 'registered')) {
+            wp_enqueue_style('select2');
+        }
 
         wp_localize_script('nom-admin', 'nomAdmin', array(
             'ajax_url' => admin_url('admin-ajax.php'),
@@ -227,9 +324,9 @@ if ( ! class_exists( 'Network_Warehouse_Orders' ) ) {
     
     public function network_orders_page() {
         // Get filter parameters
-        $warehouse_filter = isset($_GET['warehouse']) ? sanitize_text_field($_GET['warehouse']) : '';
-        $site_filter = isset($_GET['site']) ? intval($_GET['site']) : 0;
-        $status_filter = isset($_GET['status']) ? sanitize_text_field($_GET['status']) : '';
+        $warehouse_filter = $this->get_text_filter_values($_GET, 'warehouse');
+        $site_filter = $this->get_site_filter_values($_GET, 'site');
+        $status_filter = $this->get_text_filter_values($_GET, 'status');
         $date_from = isset($_GET['date_from']) ? sanitize_text_field($_GET['date_from']) : '';
         $date_to = isset($_GET['date_to']) ? sanitize_text_field($_GET['date_to']) : '';
         if ($date_from === '' && $date_to === '') {
@@ -244,10 +341,10 @@ if ( ! class_exists( 'Network_Warehouse_Orders' ) ) {
         }
         $current_page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
         
-        // Get only the main site
-        $sites = $this->get_main_sites();
+        // Exclude the multisite main site so the datasource orders are not duplicated here.
+        $sites = $this->get_network_order_sites();
         
-        // Get all warehouses from taxonomy (all sites)
+        // Get all warehouses from taxonomy across storefront sites.
         $all_warehouses = array();
         foreach ($sites as $site) {
             switch_to_blog($site->blog_id);
@@ -277,8 +374,10 @@ if ( ! class_exists( 'Network_Warehouse_Orders' ) ) {
         
         // Get orders
         $orders = $this->get_all_orders($warehouse_filter, $site_filter, $status_filter, $date_from, $date_to);
-        $total_orders = count($orders);
-        $total_pages = max(1, (int) ceil($total_orders / $per_page));
+        $total_line_items = count($orders);
+        $total_unique_orders = $this->count_unique_orders($orders);
+        $total_products_ordered = $this->count_total_products_ordered($orders);
+        $total_pages = max(1, (int) ceil($total_line_items / $per_page));
         if ($current_page > $total_pages) {
             $current_page = $total_pages;
         }
@@ -286,14 +385,18 @@ if ( ! class_exists( 'Network_Warehouse_Orders' ) ) {
         $paged_orders = array_slice($orders, $offset, $per_page);
         $pagination_args = array(
             'page' => 'nom-network-orders',
-            'warehouse' => $warehouse_filter !== '' ? $warehouse_filter : null,
-            'site' => $site_filter ? $site_filter : null,
-            'status' => $status_filter !== '' ? $status_filter : null,
+            'warehouse' => !empty($warehouse_filter) ? array_values($warehouse_filter) : null,
+            'site' => !empty($site_filter) ? array_values($site_filter) : null,
+            'status' => !empty($status_filter) ? array_values($status_filter) : null,
             'date_from' => $date_from !== '' ? $date_from : null,
             'date_to' => $date_to !== '' ? $date_to : null,
             'per_page' => $per_page,
         );
         $pagination_args = array_filter($pagination_args, function($value) {
+            if (is_array($value)) {
+                return !empty($value);
+            }
+
             return $value !== null && $value !== '';
         });
         $pagination_links = paginate_links(array(
@@ -305,8 +408,8 @@ if ( ! class_exists( 'Network_Warehouse_Orders' ) ) {
             'prev_text' => __('Previous', 'network-order-management'),
             'next_text' => __('Next', 'network-order-management'),
         ));
-        $display_start = $total_orders > 0 ? ($offset + 1) : 0;
-        $display_end = $total_orders > 0 ? min($offset + $per_page, $total_orders) : 0;
+        $display_start = $total_line_items > 0 ? ($offset + 1) : 0;
+        $display_end = $total_line_items > 0 ? min($offset + $per_page, $total_line_items) : 0;
         
         ?>
         <div class="wrap">
@@ -317,7 +420,7 @@ if ( ! class_exists( 'Network_Warehouse_Orders' ) ) {
                     <p><strong>Debug Info:</strong></p>
                     <ul>
                         <li>Warehouses found: <?php echo count($all_warehouses); ?></li>
-                        <li>Orders found: <?php echo count($orders); ?></li>
+                        <li>Order lines found: <?php echo count($orders); ?></li>
                         <li>Sites: <?php echo count($sites); ?></li>
                     </ul>
                 </div>
@@ -339,10 +442,15 @@ if ( ! class_exists( 'Network_Warehouse_Orders' ) ) {
                     <div class="nom-filter-row">
                         <div class="nom-filter-item">
                             <label for="warehouse"><?php _e('Warehouse:', 'network-order-management'); ?></label>
-                            <select name="warehouse" id="warehouse">
-                                <option value=""><?php _e('All Warehouses', 'network-order-management'); ?></option>
+                            <select
+                                name="warehouse[]"
+                                id="warehouse"
+                                class="nom-enhanced-multiselect"
+                                multiple="multiple"
+                                data-placeholder="<?php esc_attr_e('All Warehouses', 'network-order-management'); ?>"
+                            >
                                 <?php foreach ($all_warehouses as $warehouse): ?>
-                                    <option value="<?php echo esc_attr($warehouse->slug); ?>" <?php selected($warehouse_filter, $warehouse->slug); ?>>
+                                    <option value="<?php echo esc_attr($warehouse->slug); ?>" <?php selected(in_array($warehouse->slug, $warehouse_filter, true), true); ?>>
                                         <?php echo esc_html($warehouse->name); ?>
                                     </option>
                                 <?php endforeach; ?>
@@ -351,10 +459,15 @@ if ( ! class_exists( 'Network_Warehouse_Orders' ) ) {
                         
                         <div class="nom-filter-item">
                             <label for="site"><?php _e('Site:', 'network-order-management'); ?></label>
-                            <select name="site" id="site">
-                                <option value="0"><?php _e('All Sites', 'network-order-management'); ?></option>
+                            <select
+                                name="site[]"
+                                id="site"
+                                class="nom-enhanced-multiselect"
+                                multiple="multiple"
+                                data-placeholder="<?php esc_attr_e('All Sites', 'network-order-management'); ?>"
+                            >
                                 <?php foreach ($sites as $site): ?>
-                                    <option value="<?php echo $site->blog_id; ?>" <?php selected($site_filter, $site->blog_id); ?>>
+                                    <option value="<?php echo $site->blog_id; ?>" <?php selected(in_array((int) $site->blog_id, $site_filter, true), true); ?>>
                                         <?php 
                                         switch_to_blog($site->blog_id);
                                         echo esc_html(get_bloginfo('name'));
@@ -366,11 +479,16 @@ if ( ! class_exists( 'Network_Warehouse_Orders' ) ) {
                         </div>
                         
                         <div class="nom-filter-item">
-                            <label for="status"><?php _e('Status:', 'network-order-management'); ?></label>
-                            <select name="status" id="status">
-                                <option value=""><?php _e('All Statuses', 'network-order-management'); ?></option>
+                            <label for="status"><?php _e('Order Status:', 'network-order-management'); ?></label>
+                            <select
+                                name="status[]"
+                                id="status"
+                                class="nom-enhanced-multiselect"
+                                multiple="multiple"
+                                data-placeholder="<?php esc_attr_e('All Order Statuses', 'network-order-management'); ?>"
+                            >
                                 <?php foreach ($order_statuses as $status_key => $status_label): ?>
-                                    <option value="<?php echo esc_attr($status_key); ?>" <?php selected($status_filter, $status_key); ?>>
+                                    <option value="<?php echo esc_attr($status_key); ?>" <?php selected(in_array($status_key, $status_filter, true), true); ?>>
                                         <?php echo esc_html($status_label); ?>
                                     </option>
                                 <?php endforeach; ?>
@@ -388,7 +506,7 @@ if ( ! class_exists( 'Network_Warehouse_Orders' ) ) {
                         </div>
                         
                         <div class="nom-filter-item">
-                            <label for="per_page"><?php _e('Orders per page:', 'network-order-management'); ?></label>
+                            <label for="per_page"><?php _e('Order Lines per page:', 'network-order-management'); ?></label>
                             <select name="per_page" id="per_page">
                                 <?php foreach ($per_page_options as $option): ?>
                                     <option value="<?php echo esc_attr($option); ?>" <?php selected($per_page, $option); ?>>
@@ -449,27 +567,27 @@ if ( ! class_exists( 'Network_Warehouse_Orders' ) ) {
             
             <div class="nom-stats">
                 <div class="nom-stat-box">
-                    <h3><?php echo $total_orders; ?></h3>
-                    <p><?php _e('Total Orders', 'network-order-management'); ?></p>
-                </div>
-                <div class="nom-stat-box">
                     <h3><?php echo $this->calculate_total_value($orders); ?></h3>
                     <p><?php _e('Total Value', 'network-order-management'); ?></p>
                 </div>
                 <div class="nom-stat-box">
-                    <h3><?php echo $this->count_unique_products($orders); ?></h3>
-                    <p><?php _e('Unique Products', 'network-order-management'); ?></p>
+                    <h3><?php echo number_format_i18n($total_unique_orders); ?></h3>
+                    <p><?php _e('Total Orders', 'network-order-management'); ?></p>
+                </div>
+                <div class="nom-stat-box">
+                    <h3><?php echo $this->format_stat_quantity($total_products_ordered); ?></h3>
+                    <p><?php _e('Total Products Ordered', 'network-order-management'); ?></p>
                 </div>
             </div>
             
             <div class="nom-orders-table">
                 <?php if (empty($orders)): ?>
-                    <p><?php _e('No orders found matching your criteria.', 'network-order-management'); ?></p>
+                    <p><?php _e('No order lines found matching your criteria.', 'network-order-management'); ?></p>
                 <?php else: ?>
                     <div class="tablenav top">
                         <div class="tablenav-pages">
                             <span class="displaying-num">
-                                <?php printf(__('Showing %1$d-%2$d of %3$d orders', 'network-order-management'), $display_start, $display_end, $total_orders); ?>
+                                <?php printf(__('Showing %1$d-%2$d of %3$d order lines', 'network-order-management'), $display_start, $display_end, $total_line_items); ?>
                             </span>
                             <?php if (!empty($pagination_links)): ?>
                                 <span class="pagination-links"><?php echo implode(' ', $pagination_links); ?></span>
@@ -531,7 +649,7 @@ if ( ! class_exists( 'Network_Warehouse_Orders' ) ) {
                     <div class="tablenav bottom">
                         <div class="tablenav-pages">
                             <span class="displaying-num">
-                                <?php printf(__('Showing %1$d-%2$d of %3$d orders', 'network-order-management'), $display_start, $display_end, $total_orders); ?>
+                                <?php printf(__('Showing %1$d-%2$d of %3$d order lines', 'network-order-management'), $display_start, $display_end, $total_line_items); ?>
                             </span>
                             <?php if (!empty($pagination_links)): ?>
                                 <span class="pagination-links"><?php echo implode(' ', $pagination_links); ?></span>
@@ -544,12 +662,12 @@ if ( ! class_exists( 'Network_Warehouse_Orders' ) ) {
         <?php
     }
     
-    private function get_all_orders($warehouse_filter = '', $site_filter = 0, $status_filter = '', $date_from = '', $date_to = '') {
+    private function get_all_orders($warehouse_filter = array(), $site_filter = array(), $status_filter = array(), $date_from = '', $date_to = '') {
         $all_orders = array();
-        $sites = $this->get_main_sites();
+        $sites = $this->get_network_order_sites();
         
         foreach ($sites as $site) {
-            if ($site_filter && $site->blog_id != $site_filter) {
+            if (!empty($site_filter) && !in_array((int) $site->blog_id, $site_filter, true)) {
                 continue;
             }
             
@@ -566,8 +684,10 @@ if ( ! class_exists( 'Network_Warehouse_Orders' ) ) {
                 'return' => 'objects'
             );
             
-            if ($status_filter) {
-                $args['status'] = str_replace('wc-', '', $status_filter);
+            if (!empty($status_filter)) {
+                $args['status'] = array_map(function($status) {
+                    return str_replace('wc-', '', $status);
+                }, $status_filter);
             }
             
             if ($date_from && $date_to) {
@@ -593,15 +713,9 @@ if ( ! class_exists( 'Network_Warehouse_Orders' ) ) {
                     $product_warehouses = wp_get_post_terms($product_id, 'warehouse', array('fields' => 'all'));
                     
                     // Filter by warehouse if set
-                    if ($warehouse_filter) {
-                        $has_warehouse = false;
-                        foreach ($product_warehouses as $ps) {
-                            if ($ps->slug === $warehouse_filter) {
-                                $has_warehouse = true;
-                                break;
-                            }
-                        }
-                        if (!$has_warehouse) {
+                    if (!empty($warehouse_filter)) {
+                        $product_warehouse_slugs = wp_list_pluck($product_warehouses, 'slug');
+                        if (empty(array_intersect($warehouse_filter, $product_warehouse_slugs))) {
                             continue;
                         }
                     }
@@ -1110,12 +1224,39 @@ if ( ! class_exists( 'Network_Warehouse_Orders' ) ) {
         return wc_price($total);
     }
     
-    private function count_unique_products($orders) {
-        $products = array();
+    private function count_unique_orders($orders) {
+        $unique_orders = array();
+
         foreach ($orders as $order) {
-            $products[$order['product_id']] = true;
+            $site_id = isset($order['site_id']) ? (int) $order['site_id'] : 0;
+            $order_id = isset($order['order_id']) ? (int) $order['order_id'] : 0;
+
+            if ($site_id > 0 && $order_id > 0) {
+                $unique_orders[$site_id . ':' . $order_id] = true;
+            }
         }
-        return count($products);
+
+        return count($unique_orders);
+    }
+
+    private function count_total_products_ordered($orders) {
+        $quantity = 0.0;
+
+        foreach ($orders as $order) {
+            $quantity += isset($order['quantity']) ? (float) $order['quantity'] : 0.0;
+        }
+
+        return $quantity;
+    }
+
+    private function format_stat_quantity($quantity) {
+        $quantity = (float) $quantity;
+
+        if (abs($quantity - round($quantity)) < 0.00001) {
+            return number_format_i18n((int) round($quantity));
+        }
+
+        return number_format_i18n($quantity, 2);
     }
     
     public function export_orders() {
@@ -1125,9 +1266,9 @@ if ( ! class_exists( 'Network_Warehouse_Orders' ) ) {
             wp_send_json_error('Permission denied');
         }
         
-        $warehouse = isset($_POST['warehouse']) ? sanitize_text_field($_POST['warehouse']) : '';
-        $site = isset($_POST['site']) ? intval($_POST['site']) : 0;
-        $status = isset($_POST['status']) ? sanitize_text_field($_POST['status']) : '';
+        $warehouse = $this->get_text_filter_values($_POST, 'warehouse');
+        $site = $this->get_site_filter_values($_POST, 'site');
+        $status = $this->get_text_filter_values($_POST, 'status');
         $date_from = isset($_POST['date_from']) ? sanitize_text_field($_POST['date_from']) : '';
         $date_to = isset($_POST['date_to']) ? sanitize_text_field($_POST['date_to']) : '';
         

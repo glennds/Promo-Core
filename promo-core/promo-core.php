@@ -3,7 +3,7 @@
  * Plugin Name: Promo Core
  * Plugin URI: https://www.digishock.com/webdevelopment/
  * Description: Diverse functionaliteiten op maat gemaakt voor Promotie.nl - Gebruik de ingebouwde instellingenpagina's om de functies te beheren.
- * Version: 1.5.7
+ * Version: 1.5.10-3
  * Requires at least: 6.8.2
  * Requires PHP: 8.2
  * Author: Digishock

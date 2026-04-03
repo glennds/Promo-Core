@@ -12,7 +12,32 @@
     var NOM_Admin = {
         
         init: function() {
+            this.initEnhancedSelects();
             this.bindEvents();
+        },
+
+        initEnhancedSelects: function() {
+            $('.nom-enhanced-multiselect').each(function() {
+                var $select = $(this);
+
+                if ($select.hasClass('select2-hidden-accessible')) {
+                    return;
+                }
+
+                var config = {
+                    width: '100%',
+                    closeOnSelect: false,
+                    allowClear: true,
+                    placeholder: $select.data('placeholder') || '',
+                    dropdownCssClass: 'nom-select2-dropdown'
+                };
+
+                if ($.fn.selectWoo) {
+                    $select.selectWoo(config);
+                } else if ($.fn.select2) {
+                    $select.select2(config);
+                }
+            });
         },
         
         bindEvents: function() {
@@ -21,23 +46,50 @@
             $(document).on('click', '.nom-send-individual-email', this.handleIndividualWarehouseEmail);
             $(document).on('click', '.nom-send-test-email', this.handleTestEmail);
         },
+
+        getFilterValues: function(selector) {
+            var value = $(selector).val();
+
+            if (!value) {
+                return [];
+            }
+
+            return $.isArray(value) ? value : [value];
+        },
+
+        appendHiddenInputs: function(form, key, value) {
+            if ($.isArray(value)) {
+                $.each(value, function(_, item) {
+                    form.append($('<input>', {
+                        type: 'hidden',
+                        name: key + '[]',
+                        value: item
+                    }));
+                });
+
+                return;
+            }
+
+            form.append($('<input>', {
+                type: 'hidden',
+                name: key,
+                value: value
+            }));
+        },
         
         handleExport: function(e) {
             e.preventDefault();
             
             var $button = $(this);
             
-            // Get current filter values from URL parameters
-            var params = new URLSearchParams(window.location.search);
-            
             var data = {
                 action: 'nom_export_orders',
                 nonce: nomAdmin.nonce,
-                warehouse: params.get('warehouse') || '',
-                site: params.get('site') || '0',
-                status: params.get('status') || '',
-                date_from: params.get('date_from') || '',
-                date_to: params.get('date_to') || ''
+                warehouse: NOM_Admin.getFilterValues('#warehouse'),
+                site: NOM_Admin.getFilterValues('#site'),
+                status: NOM_Admin.getFilterValues('#status'),
+                date_from: $('#date_from').val() || '',
+                date_to: $('#date_to').val() || ''
             };
             
             // Show loading state
@@ -50,11 +102,7 @@
             });
             
             $.each(data, function(key, value) {
-                form.append($('<input>', {
-                    'type': 'hidden',
-                    'name': key,
-                    'value': value
-                }));
+                NOM_Admin.appendHiddenInputs(form, key, value);
             });
             
             $('body').append(form);
