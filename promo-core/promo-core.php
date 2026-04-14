@@ -3,7 +3,7 @@
  * Plugin Name: Promo Core
  * Plugin URI: https://www.digishock.com/webdevelopment/
  * Description: Diverse functionaliteiten op maat gemaakt voor Promotie.nl - Gebruik de ingebouwde instellingenpagina's om de functies te beheren.
- * Version: 1.6.1
+ * Version: 1.7.5
  * Requires at least: 6.8.2
  * Requires PHP: 8.2
  * Author: Digishock
@@ -76,11 +76,14 @@ dscore_require_optional('general_sitelogo_field',            'functions/general-
 dscore_require_optional('general_disable_gutenberg',         'functions/general-disable-gutenberg.php',         'Disable Gutenberg');
 dscore_require_optional('woo_disable_downloads',             'functions/woo-disable-downloads.php',             'WooCommerce disable downloads');
 
-dscore_require_optional('woo_min_order_amount',              'functions/woo-min-order-amount.php',              'WooCommerce min order amount');
-dscore_require_optional('woo_quantity_step',                 'functions/woo-quantity-step.php',                 'WooCommerce quantity step');
-dscore_require_optional('woo_post_calculation_prices',       'functions/woo-post-calculation-prices.php',       'WooCommerce post-calculation prices');
-dscore_require_optional('woo_trackntrace_field',             'functions/woo-trackntrace-field.php',             'WooCommerce Track & Trace field');
+dscore_require_optional('woo_min_order_amount',              'functions/woo-min-order-amount.php',              'WooCommerce Custom Field: Min. order quantity');
+dscore_require_optional('woo_quantity_step',                 'functions/woo-quantity-step.php',                 'WooCommerce Custom Field: Quantity step');
+dscore_require_optional('woo_post_calculation_prices',       'functions/woo-post-calculation-prices.php',       'WooCommerce Custom Field: Post-calculation prices');
+dscore_require_optional('woo_trackntrace_field',             'functions/woo-trackntrace-field.php',             'WooCommerce Custom Field: Track & Trace');
+dscore_require_optional('woo_customfield_hscode',            'functions/woo-customfield-hscode.php',            'WooCommerce Custom Field: HS Code');
+dscore_require_optional('woo_cartcheckout_paynow_column',    'functions/woo-cartcheckout-paynow-column.php',    'WooCommerce Custom Field: HS Code');
 dscore_require_optional('woo_pricing_filters',               'functions/woo-pricing-filters.php',               'WooCommerce pricing filters');
+dscore_require_optional('woo_sort_archives_by_sku',          'functions/woo-sort-archives-by-sku.php',          'WooCommerce sort archives by SKU');
 dscore_require_optional('woo_variable_product_flag',         'functions/woo-variable-product-flag.php',         'WooCommerce variable product flag');
 dscore_require_optional('woo_email_product_attributes',      'functions/woo-email-product-attributes.php',      'WooCommerce email product attributes');
 dscore_require_optional('woo_webshop_closure',               'functions/woo-webshop-closure.php',               'WooCommerce webshop closure');
@@ -88,10 +91,6 @@ dscore_require_optional('woo_webshop_closure',               'functions/woo-webs
 dscore_require_optional('users_redirect_guests_to_login',    'functions/users-redirect-guests-to-login.php',    'Users redirect guests to login');
 dscore_require_optional('users_restrict_login_to_subsite',   'functions/users-restrict-login-to-subsite.php',   'Users restrict login to subsite');
 dscore_require_optional('users_bulkgen_exportimport',        'functions/users-bulkgen-exportimport.php',        'Users bulk generation import/export');
-
-// dscore_require_optional('warehouse_taxonomy_standalone',     'functions/warehouse-standalone.php',              'Warehouse taxonomy standalone');
-// dscore_require_optional('warehouse_sync_multisite',          'functions/warehouse-sync.php',                    'Warehouse sync multisite');
-// dscore_require_optional('network_warehouse_orders',          'functions/network-warehouse-orders.php',          'Network warehouse orders');
 
 
 
@@ -119,7 +118,10 @@ function dscore_sanitize_toggle_options($input) {
         'woo_quantity_step'                         => 0,
         'woo_post_calculation_prices'               => 0,
         'woo_trackntrace_field'                     => 0,
+        'woo_customfield_hscode'                    => 0,
+        'woo_cartcheckout_paynow_column'            => 0,
         'woo_pricing_filters'                       => 0,
+        'woo_sort_archives_by_sku'                  => 0,
         'woo_variable_product_flag'                 => 0,
         'woo_email_product_attributes'              => 0,
         'woo_webshop_closure'                       => 0,
@@ -133,7 +135,18 @@ function dscore_sanitize_toggle_options($input) {
         // 'network_warehouse_orders'                   => 1,
     ];
 
-    if (!is_array($input)) {$input = [];}                           // Prevent null if function is toggled off
+    if (!is_array($input)) {
+        add_settings_error(
+            'ds_functiontoggles',
+            'ds_functiontoggles_invalid',
+            __('Settings could not be saved because the submitted data was invalid.', 'promo-core'),
+            'error'
+        );
+
+        return get_option('ds_functiontoggles', $defaults);
+    }
+
+    $input = array_intersect_key($input, $defaults);
     $options = array_merge($defaults, array_map('absint', $input)); // Fill empty value with 0
     return $options;
 }
@@ -187,7 +200,10 @@ function promocore_features() {
         'woo_quantity_step'                         => 0,
         'woo_post_calculation_prices'               => 0,
         'woo_trackntrace_field'                     => 0,
+        'woo_customfield_hscode'                    => 0,
+        'woo_cartcheckout_paynow_column'            => 0,
         'woo_pricing_filters'                       => 0,
+        'woo_sort_archives_by_sku'                  => 0,
         'woo_variable_product_flag'                 => 0,
         'woo_email_product_attributes'              => 0,
         'woo_webshop_closure'                       => 0,
@@ -204,6 +220,7 @@ function promocore_features() {
     ?>
     <div class="wrap">
         <h1>Promo Core Functies</h1>
+        <?php settings_errors(); ?>
 
         <form method="post" action="options.php">
             <?php settings_fields('dscore_settings'); ?>
@@ -277,10 +294,31 @@ function promocore_features() {
                         </td>
                     </tr>
                     <tr>
+                        <td>Custom Field - HS Code</td>
+                        <td>
+                            <input type="hidden" value="0" name="ds_functiontoggles[woo_customfield_hscode]">
+                            <label class="ds-toggle"><input name="ds_functiontoggles[woo_customfield_hscode]" <?php checked((int) ($options['woo_customfield_hscode'] ?? 0), 1); ?> type="checkbox" value="1"><span class="ds-slider"></span></label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Add 'Pay now' column to cart & checkout page</td>
+                        <td>
+                            <input type="hidden" value="0" name="ds_functiontoggles[woo_cartcheckout_paynow_column]">
+                            <label class="ds-toggle"><input name="ds_functiontoggles[woo_cartcheckout_paynow_column]" <?php checked((int) ($options['woo_cartcheckout_paynow_column'] ?? 0), 1); ?> type="checkbox" value="1"><span class="ds-slider"></span></label>
+                        </td>
+                    </tr>
+                    <tr>
                         <td>Filter by Purchase/Regular Price (min/max) within products overview</td>
                         <td>
                             <input type="hidden" value="0" name="ds_functiontoggles[woo_pricing_filters]">
                             <label class="ds-toggle"><input name="ds_functiontoggles[woo_pricing_filters]" <?php checked((int) ($options['woo_pricing_filters'] ?? 0), 1); ?> type="checkbox" value="1"><span class="ds-slider"></span></label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Add SKU sorting options to product archive ordering</td>
+                        <td>
+                            <input type="hidden" value="0" name="ds_functiontoggles[woo_sort_archives_by_sku]">
+                            <label class="ds-toggle"><input name="ds_functiontoggles[woo_sort_archives_by_sku]" <?php checked((int) ($options['woo_sort_archives_by_sku'] ?? 0), 1); ?> type="checkbox" value="1"><span class="ds-slider"></span></label>
                         </td>
                     </tr>
                     <tr>
